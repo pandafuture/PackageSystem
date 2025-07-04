@@ -172,3 +172,225 @@
 9. 在 **DeletePanel** 下新建一个文本（旧版） **InfoText** 。设置宽高为 **200/40** ，设置位置 X 为 **460** ，设置字体样式为 **加粗** ，设置字体大小为 **30** ，设置字体颜色为 **纯白色** ，文本内容为 **已选 0/100**
 
 10. 在 **DeletePanel** 下新建一个图片 **ConfirmBtn** 。添加 **Button 组件** ，把 **销毁** 图片赋给他， **设置原生大小** ，设置位置为 **X 692 / Y 3**
+
+
+
+
+
+# 存储框架设计
+
+## 一、静态数据的配置
+1. 创建脚本文件夹 **Script** ，在文件夹中创建一个背包表格脚本 **Package Table**
+
+2. 使用 **CreateAssetMenu 特性**
+    ```
+    // CreateAssetMenu特性：点击右键时，可以在 Unity 中创建一个配置文件。传入两个参数，一个是菜单的名称，另一个是创建后文件的名称
+    [CreateAssetMenu(menuName = "Pandafuture/PackageData", fileName = "PackageTable")]
+    ```
+
+3. 修改 **PackageTable 的父类**
+    ```
+    // 修改 PackageTable 的父类为 ScriptableObject ，这个配置文件中的每一项，都是背包中的一个物体
+    public class PackageTable : ScriptableObject
+    ```
+
+4. 设置背包表格中的 **物品属性**
+    ```
+    // 背包表格中物品包含的参数
+    public class PackageTableItem
+    {
+        public int id;  // 物品的唯一标识ID
+        public int type;  // 物品的类型（武器/食物等等）
+        public int star;  // 物品的星级名称
+        public string name;  // 物品的名称
+        public string description;  // 物品的简单描述
+        public string skillDescription;  // 物品的详细描述
+        public string imagePath;  // 物品图片的路径
+        public int num;  // 物品的数量
+    }
+    ```
+
+5.  创建 **List 容器** 容纳所有物品
+    ```
+    public class PackageTable : ScriptableObject
+    {
+        //使用一个 List 容纳所有物品
+        public List<PackageTableItem> DataList = new List<PackageTableItem>();
+    }
+    ```
+
+6. 给 **PackageTableItem** 添加 **Serializable 特性** 以便可以在 Unity 中编辑
+    ```
+    using System;  // 添加 System 名称空间
+
+
+    // 添加 Serializable Unity特性，以便可以在 Unity 中编辑，需要添加 System 名称空间
+    [System.Serializable]
+    // 背包表格中物品包含的参数
+    public class PackageTableItem
+    {
+
+    }
+    ```
+
+7. 创建一个文件夹 **TableData** 用来存储静态数据，点击鼠标右键 -> Pandafuture -> PackageData ，在文件夹内创建一个静态数据项 **Package Table**
+
+8. 锁定静态数据项 **PackageTable** 的 **检查器** ，在旁边新建一个 **检查器**
+
+9. 把每个武器的基本参数都输入 **PackageTble** 中，注意 **ID** 只能是唯一的
+
+10. 在 **Assets** 下创建一个 **Editor 文件夹** ，只有在编辑器运行模式下才会执行，打包出来之后就运行不了了。并在里面创建一个脚本 **GMCmd**
+
+11. 再在 **Assets** 下创建一个 **Resources 文件夹** ，把 **UI 文件夹** 和 **Prefab 文件夹** 和 **Table Data 文件夹** 都放进去，以便后面的 GMCmd 能够成功读取表项，Resources 文件夹属于特殊文件夹，GMCmd 放在其他地方就读不到表项了
+
+12. 在 **GMCmd** 里书写一个静态方法用来查看 **PackageTable** 里的物品是否配置成功，并且这个方法带有 Unity 特性 MenuItem ，保证 Unity 编辑器顶部菜单栏中生成一个按钮，以便我们点击执行相应的逻辑
+    ```
+    using UnityEditor;  // 添加 UnityEditor 名称空间
+
+
+    // 书写一个静态方法，并且这个方法带有 Unity 特性 MenuItem ，保证 Unity 编辑器顶部菜单栏中生成一个按钮，以便我们点击执行相应的逻辑，需要添加 UnityEditor 名称空间
+    [MenuItem("CMCmd/读取表格")]
+    public static void ReadTable()  // 静态方法命名为 读取表格
+    {
+        // 把配置的表项读出来，并且进行简单的打印，打印出来了就代表打印成功
+        PackageTable packageTable = Resources.Load<PackageTable>("TableData/PackageTable");
+        foreach(PackageTableItem packageItem in packageTable.DataList)
+        {
+            Debug.Log(string.Format("【id】:{0}，【nama】:{1}", packageItem.id, packageItem.name));
+        }
+    }
+    ```
+
+
+
+## 三、动态数据的配置（采用本地数据存取）
+1. 首先在 **Script 文件夹** 下创建一个脚本 **PackageLocalData** 。把背包数据以 Json 的格式存储在本地，并且在使用时将其从本地的文本文件中读取到内存中。
+
+2. 修改名称空间
+    ```
+    using UnityEngine;
+    using System.Collections.Generic;
+    ```
+
+3. 将其设置为单例模式，以便使用
+    ```
+    public class PackageLocalData
+    {
+        // 为了使用方便，将其设置为单例模式
+        private static PackageLocalData _instance;
+
+        public static PackageLocalData Instance
+        {
+            get
+            {
+                if(_instance == null)
+                {
+                    _instance = new PackageLocalData();
+                }
+                return _instance;
+            }
+        }
+    }
+    ```
+
+4. 设置背包表格中的物品的动态存储的参数，并使用 Serializable 特性。最后重写这子类的 ToString() 方法，以便后续打印和调试
+    ```
+    [System.Serializable]
+    // 背包表格中物品的动态存储的参数
+    public class PackageLocalItem
+    {
+        public string uid;  // 唯一的标识符 uid
+        public int id;  // 表示它是哪个物品
+        public int num;  // 表示物品的数量
+        public int level;  // 物品的等级
+        public bool isNew;  // 是否为新获得的物品
+
+        // 重写这个子类的 ToString() ，方便后续打印和调试
+        public override string ToString()
+        {
+            return string.Format("[id]:{0} [num]:{1}", id, num);
+        }
+    }
+    ```
+
+5. 在 PackageLocalData 类中使用 List 容器来缓存当前所有物品的动态信息
+    ```
+    public List<PackageLocalItem> items;
+    ```
+
+6. 在 PackageLocalData 类中设置数据保存方法
+    ```
+    public void savePackage()
+    {
+        // 使用 Unity 提供的 JsonUtility 工具，把表格信息序列化为字符串
+        string inventoryJson = JsonUtility.ToJson(this);
+        // 使用 PlayerPrefs 把文本数据存储到本地的文件中，键名为 PackageLocalData
+        PlayerPrefs.SetString("PackageLocalData", inventoryJson);
+        PlayerPrefs.Save();
+    }
+    ```
+
+7. 在 PackageLocalData 类中设置数据读取方法
+    ```
+    public List<PackageLocalItem> LoadPackage()
+    {
+        // 首先判断要缓存的数据是否已存在，若已存在，则说明之前已读取过文本信息，就直接返回 items
+        if(items != null)
+        {
+            return items;
+        }
+        if (PlayerPrefs.HasKey("PackageLocaData"))  // 检查 PlayerPrefs 中是否有键名为 PackageLocalData 的文本数据，如果没有就从本地的文件中取读取
+        {
+            // 使用 PlayerPrefs 把本地的文件读取到内存中，使之成为字符串
+            string inventoryJson = PlayerPrefs.GetString("PackageLocalData");
+            // 在使用 JsonUtility 来反序列化为 packageLocalData 再填充 items 列表
+            PackageLocalData packageLocalData = JsonUtility.FromJson<PackageLocalData>(inventoryJson);
+            items = packageLocalData.items;
+            return items;
+        }
+        else // 如果 PlayerPrefs 中不存在 PackageLocalData 的文本数据，就创建新的空列表
+        {
+            items = new List<PackageLocalItem>();
+            return items;
+        }
+    }
+    ```
+
+8. 在 **GMCmd** 里书写两个静态方法用来测试 **PackageLocalData** 的本地数据存储，并且这两个方法带有 Unity 特性 MenuItem ，保证 Unity 编辑器顶部菜单栏中生成一个按钮，以便我们点击执行相应的逻辑
+    ```
+    [MenuItem("CMCmd/创建背包测试数据")]
+    public static void CreateLocalPackageData()
+    {
+        // 创建背包数据并保存到本机
+        // 获取背包单例实例，并将其物品列表初始化为空列表
+        PackageLocalData.Instance.items = new List<PackageLocalItem>();
+        // 创建测试物品
+        for(int i = 1; i < 9; i++)
+        {
+            // 创建新物品
+            PackageLocalItem packageLocalItem = new()
+            {
+                uid = Guid.NewGuid().ToString(),  // Guid 需要添加 System 名称空间来生成一个唯一的字符串
+                id = i,
+                num = i,
+                level = i,
+                isNew = i % 2 == 1
+            };
+            // 添加到背包
+            PackageLocalData.Instance.items.Add(packageLocalItem);
+        }
+        PackageLocalData.Instance.savePackage();  // 保存数据
+    }
+    ```
+    ```
+    [MenuItem("CMCmd/读取背包测试数据")]
+    public static void ReadLocalPackageData()
+    {
+        // 读取数据
+        List<PackageLocalItem> readItems = PackageLocalData.Instance.LoadPackage();  // 调用读取方法
+        foreach (PackageLocalItem item in readItems)
+        {
+            Debug.Log(item);
+        }
+    }
+    ```
