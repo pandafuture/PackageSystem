@@ -394,3 +394,435 @@
         }
     }
     ```
+
+
+
+# 界面逻辑
+
+
+## 一、UI 框架
+**UGUI** 分为三大部分， **UIManager** 跨场景的全局 UI 管理器；**BasePanel** 所有界面的父类，封装一些通用方法；**界面关系配置表** 界面预制件的配置路径，通常放在 UIManager 脚本中
+1. 在 **Script** 中创建两个脚本 **UIManager** 和 **BasePanel**
+
+2. 将 **UIManager** 设置为 **单例模式**
+    ```
+    // 跨场景的全局 UI 管理器
+    public class UIManager
+    {
+        // 首先将 UIManager 设置为单例模式
+        private static UIManager _instance;
+        public static UIManager Instance
+        {
+            get
+            {
+                if(_instance == null)
+                {
+                    _instance = new UIManager();
+                }
+                return _instance;
+            }
+        }
+    }
+    ```
+
+3. **BasePanel** 继承 **Monobehaviour** ，包含 **打开界面方法** 和 **关闭界面方法** ，然后设置两个属性 **isRemove 界面关闭标志位** 和 **name 界面名称**
+    ```
+    // 所有界面的父类，继承 MonoBehaviour ，需要挂接在物体身上，封装一些通用的方法
+    public class BasePanel : MonoBehaviour
+    {
+        protected bool isRemove = false;  // 标识当前界面是否已关闭的标志位
+        protected new string name;  // 界面的名称
+
+
+        // 打开界面的方法
+        public virtual void OpenPanel(string name)
+        {
+            this.name = name;  // 给当前界面的名称进行赋值
+            gameObject.SetActive(true);  // 显示界面
+        }
+
+
+        // 关闭界面的方法
+        public virtual void ClosePanel(string name)
+        {
+            isRemove = true;  // 标记当前界面已关闭
+            gameObject.SetActive(false);  // 关闭界面
+            Destroy(gameObject);  // 销毁物体
+        }
+    }
+    ```
+
+4. 在 **UIManager 脚本** 中设置存储界面名称的常量表 **UIConst**
+    ```
+    // 存储界面名称的常量表
+    public class UIConst
+    {
+        // public const string Panel_1 = "Panel_1Name";
+    }
+    ```
+
+5. 在 **UIManager** 中用 **字典** 搭建 **界面关系配置表** ，并创建一个私有的 **UIManager** 其中调用 **初始化字典** 的方法。再设置 **初始化字典的方法**
+    ```
+    // 搭建界面关系配置表，用字典来存储
+    private Dictionary<string, string> pathDict;
+    ```
+    ```
+    private UIManager()
+    {
+        InitDicts();  // 调用字典初始化方法
+    }
+
+
+    // 初始化字典
+    private void InitDicts()
+    {
+        // 把界面路径配置到这映射关系的字典中
+        pathDict = new Dictionary<string, string>()
+        {
+            // UIConst.Panel_1,"Menu/AllPanel"
+        };
+    }
+    ```
+
+6. 在**UIManager** 中设置 UI 界面 **根节点 UIRoot**
+    ```
+    // 任何界面都需要一个可以挂载的地方，把挂载的根节点称为 uiRoot ，即 UI 最顶层的父节点
+    private Transform _uiRoot;
+
+
+    // 设置 UI 根节点 uiRoot
+    public Transform UIRoot
+    {
+        get
+        {
+            if(_uiRoot == null)
+            {
+                _uiRoot = GameObject.Find("Canvas").transform;  // 把画布 Canvas 作为根节点
+            }
+            return _uiRoot;
+        }
+    }
+    ```
+
+7. 在 **UIManager** 中设置 **打开界面方法** 和 **关闭界面方法**
+    ```
+    // 用于打开界面
+    public BasePanel OpenPanel(string name)
+    {
+
+    }
+
+    // 用于关闭界面
+    public bool ClosePanel()
+    {
+
+    }
+    ```
+
+8. 在 **UIManager** 添加两个字典，**prefabDict 预制件缓存字典** 和 **panelDict 界面缓存字典**
+    ```
+    // 预制件缓存字典
+    private Dictionary<string, GameObject> prefabDict;
+
+    // 界面缓存字典，存储当前已打开的界面
+    public Dictionary<string, BasePanel> panelDict;
+    ```
+
+9. 在 **InitDicts()** 中对 **prefabDict 预制件字典** 和 **panelDict 界面缓存字典** 进行初始化
+    ```
+    // 初始化预制件字典
+    prefabDict = new Dictionary<string, GameObject>();
+    // 初始化界面缓存字典
+    panelDict = new Dictionary<string, BasePanel>();
+    ```
+
+10. 设置 **UIManager** 中的 **OpenPanel 打开界面** 的方法。
+    - 首先检查这界面是否已经打开了。
+    - 再检查路径是否有配置。
+    - 然后加载使用缓存预制件，先在预制件缓存字典中查看，是否之前已被加载过，如果被加载过了就直接拿来用，如果没有被加载过，就把他加载出来并且放在缓存字典中。
+    - 最后实现打开界面。把预制件加载出来，并挂载在 UIRoot 下，使其成为 UIRoot 的一个子节点，把它添加到 panelDict 中，表示这个界面已经打开了
+    ```
+    // 用于打开界面
+    public BasePanel OpenPanel(string name)
+    {
+        BasePanel panel = null;
+        // 首先检查这个界面是否打开了
+        if(panelDict.TryGetValue(name, out panel))
+        {
+            Debug.LogError("界面已打开：" + name);
+            return null;
+        }
+
+        // 检查路径是否有配置
+        string path = "";
+        if(!pathDict.TryGetValue(name, out path))
+        {
+            Debug.LogError("界面名称错误，或者未配置路径：" + name);
+            return null;
+        }
+
+        // 加载使用缓存的界面预制件
+        GameObject panelPrefab = null;
+        // 先在预制件缓存字典中查看，是否之前已被加载过，如果被加载过了就直接拿来用
+        if(!prefabDict.TryGetValue(name, out panelPrefab))
+        {
+            // 如果没有被加载过，就把他加载出来并且放在缓存字典中
+            string realPath = "Prefab/Panel/" + path;
+            panelPrefab = Resources.Load<GameObject>(realPath) as GameObject;
+            prefabDict.Add(name, panelPrefab);
+        }
+
+        // 打开界面
+        // 把预制件加载出来，并挂载在 UIRoot 下，使其成为 UIRoot 的一个子节点
+        GameObject panelObject = GameObject.Instantiate(panelPrefab, UIRoot, false);
+        panel = panelObject.GetComponent<BasePanel>();
+        // 把它添加到 panelDict 中，表示这个界面已经打开了
+        panelDict.Add(name, panel);
+        return panel;
+    }
+    ```
+
+11. 设置 **UIManager** 中的 **ClosePanel 关闭界面** 的方法。
+    - 先检查这个界面是否在 panelDict 中
+    - 如果界面已经打开，则执行这个界面的 ClosePanel()
+    - 修改 **BasePanel** 中的 **ClosePanel 关闭界面方法** 。加上检查当前这个界面是否存在，如果存在的话，就移除缓存，表示界面没打开
+    ```
+    // 用于关闭界面
+    public bool ClosePanel(string name)
+    {
+        BasePanel panel = null;
+
+        // 检查这个界面是否在 panelDict 中
+        if (!panelDict.TryGetValue(name, out panel))
+        {
+            Debug.LogError("界面未打开：" + name);
+            return false;
+        }
+
+        // 如果界面已经打开，则执行这个界面的 ClosePanel()
+        panel.ClosePanel();
+        return true;
+    }
+    ```
+    ```
+    // 关闭界面的方法
+    public virtual void ClosePanel()
+    {
+        isRemove = true;  // 标记当前界面已关闭
+        gameObject.SetActive(false);  // 关闭界面
+        Destroy(gameObject);  // 销毁物体
+
+        // 检查当前这个界面是否存在，如果存在的话，就移除缓存，表示界面没打开
+        if (UIManager.Instance.panelDict.ContainsKey(name))
+        {
+            UIManager.Instance.panelDict.Remove(name);
+        }
+    }
+    ```
+
+
+**通用 UI 框架**  
+- **UIManager**
+    ```
+    using System.Collections;
+    using System.Collections.Generic;
+    using UnityEngine;
+
+
+    // 跨场景的全局 UI 管理器
+    public class UIManager
+    {
+        // 首先将 UIManager 设置为单例模式
+        private static UIManager _instance;
+
+        // 任何界面都需要一个可以挂载的地方，把挂载的根节点称为 uiRoot ，即 UI 最顶层的父节点
+        private Transform _uiRoot;
+
+        // 搭建界面关系配置表，用字典来存储
+        private Dictionary<string, string> pathDict;
+
+        // 预制件缓存字典
+        private Dictionary<string, GameObject> prefabDict;
+
+        // 界面缓存字典，存储当前已打开的界面
+        public Dictionary<string, BasePanel> panelDict;
+
+        public static UIManager Instance
+        {
+            get
+            {
+                if(_instance == null)
+                {
+                    _instance = new UIManager();
+                }
+                return _instance;
+            }
+        }
+
+
+        // 设置 UI 根节点 uiRoot
+        public Transform UIRoot
+        {
+            get
+            {
+                if(_uiRoot == null)
+                {
+                    if (GameObject.Find("Canvas"))
+                    {
+                        _uiRoot = GameObject.Find("Canvas").transform;  // 把画布 Canvas 作为根节点
+                    }
+                    else
+                    {
+                        _uiRoot = new GameObject("Canvas").transform;
+                    }
+                }
+                return _uiRoot;
+            }
+        }
+
+
+        private UIManager()
+        {
+            InitDicts();  // 调用字典初始化方法
+        }
+
+
+        // 初始化字典
+        private void InitDicts()
+        {
+            // 初始化预制件字典
+            prefabDict = new Dictionary<string, GameObject>();
+            // 初始化界面缓存字典
+            panelDict = new Dictionary<string, BasePanel>();
+            // 把界面路径配置到这映射关系的字典中
+            pathDict = new Dictionary<string, string>()
+            {
+                // UIConst.Panel_1,"Menu/AllPanel"
+            };
+        }
+
+
+        public BasePanel GetPanel(string name)
+        {
+            BasePanel panel = null;
+            // 检查是否已打开
+            if(panelDict.TryGetValue(name, out panel))
+            {
+                return panel;
+            }
+            return null;
+        }
+
+
+        // 用于打开界面
+        public BasePanel OpenPanel(string name)
+        {
+            BasePanel panel = null;
+            // 首先检查这个界面是否打开了
+            if(panelDict.TryGetValue(name, out panel))
+            {
+                Debug.LogError("界面已打开：" + name);
+                return null;
+            }
+
+            // 检查路径是否有配置
+            string path = "";
+            if(!pathDict.TryGetValue(name, out path))
+            {
+                Debug.Log("界面名称错误，或者未配置路径：" + name);
+                return null;
+            }
+
+            // 加载使用缓存的界面预制件
+            GameObject panelPrefab = null;
+            // 先在预制件缓存字典中查看，是否之前已被加载过，如果被加载过了就直接拿来用
+            if(!prefabDict.TryGetValue(name, out panelPrefab))
+            {
+                // 如果没有被加载过，就把他加载出来并且放在缓存字典中
+                string realPath = "Prefab/Panel/" + path;
+                panelPrefab = Resources.Load<GameObject>(realPath) as GameObject;
+                prefabDict.Add(name, panelPrefab);
+            }
+
+            // 打开界面
+            // 把预制件加载出来，并挂载在 UIRoot 下，使其成为 UIRoot 的一个子节点
+            GameObject panelObject = GameObject.Instantiate(panelPrefab, UIRoot, false);
+            panel = panelObject.GetComponent<BasePanel>();
+            // 把它添加到 panelDict 中，表示这个界面已经打开了
+            panelDict.Add(name, panel);
+            panel.OpenPanel(name);
+            return panel;
+        }
+
+        // 用于关闭界面
+        public bool ClosePanel(string name)
+        {
+            BasePanel panel = null;
+
+            // 检查这个界面是否在 panelDict 中
+            if (!panelDict.TryGetValue(name, out panel))
+            {
+                Debug.Log("界面未打开：" + name);
+                return false;
+            }
+
+            // 如果界面已经打开，则执行这个界面的 ClosePanel()
+            panel.ClosePanel();
+            return true;
+        }
+    }
+
+
+    // 存储界面名称的常量表
+    public class UIConst
+    {
+        // public const string Panel_1 = "Panel_1Name";
+    }
+    ```
+
+- **BasePanel**
+    ```
+    using System.Collections;
+    using System.Collections.Generic;
+    using UnityEngine;
+
+
+    // 所有界面的父类，继承 MonoBehaviour ，需要挂接在物体身上，封装一些通用的方法
+    public class BasePanel : MonoBehaviour
+    {
+        protected bool isRemove = false;  // 标识当前界面是否已关闭的标志位
+        protected new string name;  // 界面的名称
+
+        protected virtual void Awake()
+        {
+
+        }
+
+        public virtual void SetActive(bool active)
+        {
+            gameObject.SetActive(active);
+        }
+
+        // 打开界面的方法
+        public virtual void OpenPanel(string name)
+        {
+            this.name = name;  // 给当前界面的名称进行赋值
+            gameObject.SetActive(true);  // 显示界面
+        }
+
+
+        // 关闭界面的方法
+        public virtual void ClosePanel()
+        {
+            isRemove = true;  // 标记当前界面已关闭
+            SetActive(false);  // 关闭界面
+            Destroy(gameObject);  // 销毁物体
+
+            // 检查当前这个界面是否存在，如果存在的话，就移除缓存，表示界面没打开
+            if (UIManager.Instance.panelDict.ContainsKey(name))
+            {
+                UIManager.Instance.panelDict.Remove(name);
+            }
+        }
+    }
+    ```
