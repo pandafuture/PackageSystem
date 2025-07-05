@@ -175,6 +175,29 @@
 
 
 
+## 六、完善界面
+1. 在 **LeftTop** 下新建一个图片，把 **背包** 图片赋给它， **设置原生大小** ，设置位置 **X 98 / Y -49**
+
+2. 把 **LeftTop** 的图层顺序放在 **TopCenter** 之下，以便背包等图标的显示
+
+3. 在 **LeftTop** 下新建一个文本（旧版） **TabName** ，文本内容为 **武器** ，字体样式为 **加粗** ，字体大小为 **20** ，设置颜色为 **211/188/142** ，对齐设置为 **居中 / 居中** ，设置位置为 **X 172 / Y -45**
+
+4. 把 **RightTop** 的图层顺序放在 **LeftTop** 之下
+
+5. 在 **RightTop** 下新建一个文本（旧版） **NumText** 用来表示物品数量和总数，设置字体样式为 **加粗** ，字体大小为 **20** ，对齐为 **居中 / 居中** ，字体颜色为 **209/186/141** ，设置位置为 **X -316 / Y -43** ，文本内容为 **武器 213/1000**
+
+6. 在 **RightTop** 下新建一个图片 **Close** ，添加 **Button 组件** ，把 **退出** 图片赋给他，**设置原生大小** ，设置位置为 **X -106 / Y -45**
+
+7. 在 **PackagePanel** 下新建一个空物体 **Left** ，点击之后会切换当前的页签，锚点设置为 **左居中** ，设置位置为 **X 0**
+
+8. 在 **PackagePanel** 下新建一个空物体 **Right** ，点击之后会切换当前的页签，锚点设置为 **右居中** ，设置位置为 **X 0**
+
+9. 在 **Left** 下新建一个按钮（旧版） **Button** ，把 **Button 组件** 下的文本物体删除，把图片 **左** 赋给他， **设置原生大小** ，设置位置 X 为 **97**
+
+10. 在 **Right** 下新建一个按钮（旧版） **Button** ，把 **Button 组件** 下的文本物体删除，把图片 **右** 赋给他， **设置原生大小** ，设置位置 X 为 **-45**
+
+
+
 
 
 # 存储框架设计
@@ -621,7 +644,7 @@
     ```
 
 
-**通用 UI 框架**  
+***通用 UI 框架***  
 - **UIManager**
     ```
     using System.Collections;
@@ -824,5 +847,505 @@
                 UIManager.Instance.panelDict.Remove(name);
             }
         }
+    }
+    ```
+
+12. 在 **UIConst** 中添加 **PackagePanel** 常量
+    ```
+    // 存储界面名称的常量表
+    public class UIConst
+    {
+        // 新增 PackagePanel 常量
+        public const string PackagePanel = "PackagePanel";
+    }
+    ```
+
+13. 在 **InitDict** 中配置 **PackagePanel** 常量
+    ```
+    // 把界面路径配置到这映射关系的字典中
+    pathDict = new Dictionary<string, string>()
+    {
+        // 配置 PackagePanel 对应的路径
+        {UIConst.PackagePanel, "Package/PackagePanel" },
+    };
+    ```
+
+14. 在 **Script** 中新建一个脚本 **PackagePanel** ，用来处理背包界面相关的逻辑代码
+
+15. **PackagePanel** 继承自 **BasePanel**
+    ```
+    public class PackagePanel : BasePanel
+    {
+        
+    }
+    ```
+
+16. 把 **PackagePanel 脚本** 挂载到 **PackagePanel 预制件** 上
+
+17. 测试背包界面是否正常运行，在 **GMCmd 脚本** 中添加 **打开背包界面的指令** 。然后回到场景中，先把场景中的背包界面删除，然后运行游戏，点击打开背包界面的按钮进行测试
+    ```
+    [MenuItem("CMCmd/打开背包主界面")]
+    public static void OpenPackagePanel()
+    {
+        UIManager.Instance.OpenPanel(UIConst.PackagePanel);  // 打开背包界面的指令
+    }
+    ```
+
+
+## 二、界面初始化
+1. 通过 **PackagePanel 脚本** 拿到界面里的 UI 组件。
+    - 先对各个 UI 组件的属性进行 **初始化** 
+    - 然后用 **transform.Find()** 根据路径去绑定属性
+    - 然后对子物体 DeletePanel 和 BottomMenus 的可见性初始化为不可见
+        ```
+        public class PackagePanel : BasePanel  // PackagePanle 继承自 BasePanel
+        {
+            // 对各个 UI 组件的属性进行初始化
+            private Transform UIMenu;
+            private Transform UIMenuWeapon;
+            private Transform UIMenuFood;
+            private Transform UITabName;
+            private Transform UICloseBtn;
+            private Transform UICenter;
+            private Transform UIScrollView;
+            private Transform UIDetaiPanel;
+            private Transform UILeftBtn;
+            private Transform UIRightBtn;
+            private Transform UIDeletePanel;
+            private Transform UIDeleteBackBtn;
+            private Transform UIDeleteInfoText;
+            private Transform UIConfirmBtn;
+            private Transform UIBottomMenus;
+            private Transform UIDeleteBtn;
+            private Transform UIDetailBtn;
+        }
+        ```
+        ```
+        override protected void Awake()
+        {
+            base.Awake();
+            InitUI();
+        }
+
+
+        private void InitUI()
+        {
+            InitUIName();
+        }
+
+
+        private void InitUIName()
+        {
+            // 使用 transform.Find() 根据路径去绑定属性
+            UIMenu = transform.Find("TopCenter/Menu");
+            UIMenuWeapon = transform.Find("TopCenter/Menu/Weapon");
+            UIMenuFood = transform.Find("TopCenter/Menu/Food");
+
+            UITabName = transform.Find("LeftTop/TabName");
+
+            UICloseBtn = transform.Find("RightTop/Close");
+
+            UICenter = transform.Find("center");
+            UIScrollView = transform.Find("Centr/Scroll View");
+            UIDetailPanel = transform.Find("Center/DetailPanel");
+
+            UILeftBtn = transform.Find("Left/Button");
+            UIRightBtn = transform.Find("Right/Button");
+
+            UIDeletePanel = transform.Find("Bottom/DeletePanel");
+            UIDeleteBackBtn = transform.Find("Bottom/DeletePanel/Back");
+            UIDeleteInfoText = transform.Find("Bottom/DeletePanel/InfoText");
+            UIDeleteConfirmBtn = transform.Find("Bottom/DeletePanel/ConfirmBtn");
+            UIBottomMenus = transform.Find("Bottom/BottomMenus");
+            UIDeleteBtn = transform.Find("BOttom/BottomMenus/DeleteBtn");
+            UIDetailBtn = transform.Find("BOttom/BottomMenus/DetailBtn");
+
+            // 对子物体 DeletePanel 和 BottomMenus 的可见性初始化为不可见
+            UIDeletePanel.gameObject.SetActive(false);
+            UIBottomMenus.gameObject.SetActive(false);
+        }
+
+        ```
+
+2. 在 **PackagePanel 脚本** 中把界面中出现的按钮都注册点击事件。注意 **\<Button\>** 要引用 **using UnityEngine.UI** 名称空间
+    ```
+    // 把界面中出现的按钮都注册点击事件
+    private void InitClick()
+    {
+        UIMenuWeapon.GetComponent<Button>().onClick.AddListener(OnClickWeapon);
+        UIMenuFood.GetComponent<Button>().onClick.AddListener(OnClickFood);
+        UICloseBtn.GetComponent<Button>().onClick.AddListener(OnClickClose);
+        UILeftBtn.GetComponent<Button>().onClick.AddListener(OnClickLeft);
+        UIRightBtn.GetComponent<Button>().onClick.AddListener(OnClickRight);
+
+        UIDeleteBackBtn.GetComponent<Button>().onClick.AddListener(OnDeleteBack);
+        UIDeleteConfirmBtn.GetComponent<Button>().onClick.AddListener(OnDeleteConfirm);
+        UIDeleteBtn.GetComponent<Button>().onClick.AddListener(OnDeleteConfirm);
+        UIDetailBtn.GetComponent<Button>().onClick.AddListener(OnDetail);
+    }
+    ```
+
+3. 在 **PackagePanel 脚本** 中添加每个按钮的 **点击事件**
+    ```
+    // 添加点击事件
+    private void OnClickWeapon()
+    {
+        print(">>>>> OnClickWeapon");
+    }
+    private void OnClickFood()
+    {
+        print(">>>>> OnClickFood");
+    }
+    private void OnClickClose()
+    {
+        print(">>>>> OnClickClose");
+    }
+    private void OnClickLeft()
+    {
+        print(">>>>> OnClickLeft");
+    }
+    private void OnClickRight()
+    {
+        print(">>>>> OnClickRight");
+    }
+    private void OnDeleteBack()
+    {
+        print(">>>>> OnDeleteBack");
+    }
+    private void OnDeleteConfirm()
+    {
+        print(">>>>> OnDeleteConfirm");
+    }
+    private void OnDelete()
+    {
+        print(">>>>> OnDelete");
+    }
+    private void OnDetail()
+    {
+        print(">>>>> OnDetail");
+    }
+    ```
+
+4. 在 **Script** 中新建一个脚本 **PackageCell 脚本** 用来初始化背包中的物体，每个物体都看作一个独立的对象。
+
+5. 打开背包中物品的预制件 **PackageUIItem** ，把 **PackageCell 脚本** 挂载上去
+
+6. 通过 **PackageCell 脚本** 拿到背包中物品的 UI 组件。
+    - 先对各个 UI 组件的属性进行 **初始化** 
+    - 然后用 **transform.Find()** 根据路径去绑定属性
+    ```
+    public class PackageCell : MonoBehaviour
+    {
+        // 添加物品的 UI 属性
+        private Transform UIIcon;
+        private Transform UIHead;
+        private Transform UINew;
+        private Transform UISelect;
+        private Transform UILevel;
+        private Transform UIStars;
+        private Transform UIDeleteSelect;
+
+
+        private void Awake()
+        {
+            InitUIName();
+        }
+
+
+        private void InitUIName()
+        {
+            // 使用 transform.Find() 根据路径去绑定属性
+            UIIcon = transform.Find("Top/Icon");
+            UIHead = transform.Find("Top/Head");
+            UINew = transform.Find("Top/New");
+            UILevel = transform.Find("Bottom/LevelText");
+            UIStars = transform.Find("Bottom/Stars");
+            UISelect = transform.Find("Select");
+            UIDeleteSelect = transform.Find("DeleteSelect");
+
+            UIDeleteSelect.gameObject.SetActive(false);
+        }
+    }
+    ```
+
+7. 运行游戏，打开界面，测试各个 UI 组件的 **路径** 是否配置正确，若有报错则查看报错的路径进行修改，若运行无报错，则配置成功正确
+
+
+## 三、控制器逻辑
+需要获取动态数据，再配合静态数据对滚动容器初始化，就要先获得数据。  
+数据获取功能可以复用，所以用 **GameManager**  作为中间的管理器来统一处理这些数据，界面的逻辑只通过管理器来获得和修改数据
+
+1. 在场景中新建一个空物体 **GameManager** ，然后再 **Script** 中新建一个脚本 **GameManager 脚本** ，并把脚本挂载到 **GameManager 物体** 上
+
+2. 先把 **GameManager 脚本** 设置为单例模式，方便后续使用
+    ```
+    // 先把 GameManager 设置为单例模式
+    private static GameManager _instance;
+
+    private void Awake()
+    {
+        _instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+
+    // 添加 Instance 属性，方便外部调用，设置为公有，方便对数据的处理
+    public static GameManager Instance
+    {
+        get
+        {
+            return _instance;
+        }
+    }
+    ```
+
+3. 再 **Start()** 中主动打开背包界面
+    ```
+    void Start()
+    {
+        // 主动打开背包界面
+        UIManager.Instance.OpenPanel(UIConst.PackagePanel);  // 调用 UIManager 实例中打开界面的方法，同时传入 PackagePanel 背包界面常量名，打开背包界面
+    }
+    ```
+
+4. 在 **GameManager 脚本** 中添加对静态数据处理的方法 **GetPackageTable()**
+    ```
+    // 静态数据
+    private PackageTable packageTable;
+
+
+    // 对静态数据处理的方法
+    public PackageTable GetPackageTable()
+    {
+        // 使用 Unity 提供的 Resources.Load<> 去加载配置好的表格数据
+        if(packageTable == null)  // 若已经加载过，就不用重复加载，直接使用缓存中的数据
+        {
+            packageTable = Resources.Load<PackageTable>("TableData/PackageTable");
+        }
+        return packageTable;
+    }
+
+    ```
+
+5. 在 **GameManager 脚本** 中添加对动态数据加载的方法
+    ```
+    // 对动态数据加载的方法
+    public List<PackageLocalItem> GetPackageLocalData()
+    {
+        return PackageLocalData.Instance.LoadPackage();  // 直接调用 PackageLocalData 实例中封装好的加载数据的方法 LoadPackage()
+    }
+    ```
+
+6. 在 **GameManager 脚本** 中添加根据 id 获取表中指定数据的方法
+    ```
+    // 根据 id 取到表格中的指定数据的方法
+    public PackageTableItem GetPackageItemById(int id)
+    {
+        List<PackageTableItem> packageDataList = GetPackageTable().DataList;
+        foreach(PackageTableItem item in packageDataList)
+        {
+            if(item.id == id)
+            {
+                return item;
+            }
+        }
+        return null;
+    }
+    ```
+
+7. 在 **GameManager 脚本** 中添加根据 uid 找到本地数据中的动态数据的指定项的方法
+    ```
+    // 根据 uid 找到本地数据中动态数据的指定项的方法
+    public PackageLocalItem GetPackageLocalItemByUId(string uid)
+    {
+        List<PackageLocalItem> packageDataList = GetPackageLocalData();
+        foreach(PackageLocalItem item in packageDataList)
+        {
+            if(item.uid == uid)
+            {
+                return item;
+            }
+        }
+        return null;
+    }
+    ```
+
+8. 在 **GameManager 脚本** 中的 **GameManager 类** 中写一个获取背包物品并进行排序的方法，让背包中的物品按预定的规则进行排序，方便确定显示优先级
+    ```
+    // 对背包物品获取并按照预定规则进行排序，以确定显示优先级
+    public List<PackageLocalItem> GetSortPackageLocalData()
+    {
+        List<PackageLocalItem> localItems = PackageLocalData.Instance.LoadPackage();
+        localItems.Sort(new PackageItemComparer());
+        return localItems;
+    }
+    ```
+
+9. 在 **GameManager 脚本** 的 **GameManger 类外面** 写排序规则。先按星级，再按 id ,再按 等级
+
+    ```
+    // 定义排序规则
+    public class PackageItemComparer : IComparer<PackageLocalItem>
+    {
+        public int Compare(PackageLocalItem a, PackageLocalItem b)
+        {
+            PackageTableItem x = GameManager.Instance.GetPackageItemById(a.id);
+            PackageTableItem y = GameManager.Instance.GetPackageItemById(b.id);
+            // 首先按照 star 从大到小排序
+            int starComparison = y.star.CompareTo(x.star);
+
+            // 如果 star 相同，则按 id 从大到小排序
+            if (starComparison == 0)
+            {
+                int idComparison = y.id.CompareTo(x.id);
+                // 如果 id 相同，则按 level 从大到小排序
+                if (idComparison == 0)
+                {
+                    return b.level.CompareTo(a.level);
+                }
+                return idComparison;
+            }
+            return starComparison;
+        }
+    }
+    ```
+
+
+## 四、界面逻辑
+1. 在 **PackagePanel 脚本** 中添加 **PackageUIItemPrefab 背包中物品** 的预制件属性，就可以在属性面板中对其进行复制生成
+    ```
+    // 背包子物体预制件属性
+    public GameObject PackageUIItemPrefab;
+    ```
+
+2. 在 **PackagePanel 编辑器面板** 中把 **PackageUIItem 预制件** 拖到 **PackagePanel 脚本** 中
+
+3. 在 **PackagePanel 脚本** 中的 **Start()** 中执行 **UI 刷新方法 RefreshUI()** 
+    ```
+    private void Start()
+    {
+        RefreshUI();  // UI 刷新方法
+    }
+    ```
+
+4. 在 **PackagePanel 脚本** 中写 UI 刷新方法
+    ```
+    // UI 刷新方法
+    private void RefreshUI()
+    {
+        RefreshScroll();  // 刷新滚动容器
+    }
+    ```
+
+5. 在 **PackagePanel 脚本** 中写 **刷新滚动容器的方法。
+    - 先清理滚动容器中原本的物品
+    - 再使用 GameManager 中封装好的获取本地数据的方法，来拿到当前身上所有的背包数据，并且根据这些数据去初始化滚动容器
+    ```
+    // 刷新滚动容器方法
+    private void RefreshScroll()
+    {
+        // 先清理滚动容器中原本的物品
+        RectTransform scrollContent = UIScrollView.GetComponent<ScrollRect>().content;
+        for(int i = 0; i < scrollContent.childCount; i++)
+        {
+            Destroy(scrollContent.GetChild(i).gameObject);
+        }
+
+        // 使用 GameManager 中封装好的获取本地数据的方法，来拿到当前身上所有的背包数据，并且根据这些数据去初始化滚动容器
+        foreach(PackageLocalItem localData in GameManager.Instance.GetSortPackageLocalData())
+        {
+            Transform PackageUIItem = Instantiate(PackageUIItemPrefab.transform, scrollContent) as Transform;
+            PackageCell packageCell = PackageUIItem.GetComponent<PackageCell>();
+            //packageCell.Refresh(localData, this);
+        }
+    }
+    ```
+
+
+## 五、物品逻辑
+1. 在 **PackageCell 脚本** 中添加 **packageLocalData 当前物品的动态数据** 和 **packageTableItem 当前物品的静态数据** 和 **uiParent 当前物品的父物品(PackagePanel)** 三个属性
+    ```
+    private PackageLocalItem packageLocalData;  // 当前物品的动态数据
+    private PackageTableItem packageTableItem;  // 当前物品的静态数据
+    private PackagePanel uiParent;  // 当前物品的父物品(PackagePanel)
+    ```
+
+2. 在 **PackageCell 脚本** 中写刷新这个物品状态的方法 **Refresh()** 
+    - 需要传入这个物品的 **动态数据** 、**父物体**
+    - 对物品基本信息数据进行初始化 **动态数据** 、**静态数据** 、**父物体**
+    - 对 UI 组件的信息进行初始化
+        - 等级信息
+        - 是否新获得
+        - 物品的图片
+        - 刷新星级
+    ```
+    using UnityEngine.UI;  // 添加引用 UI 的名称空间
+
+
+
+    // 刷新这个物品的状态的方法，要传进当前物品的动态数据、父物体
+    public void Refresh(PackageLocalItem packageLocalData, PackagePanel uiParent)
+    {
+        // 数据初始化
+        this.packageLocalData = packageLocalData;
+        this.packageTableItem = GameManager.Instance.GetPackageItemById(packageLocalData.id);
+        this.uiParent = uiParent;
+
+
+        // 对 UI 组件的信息进行初始化
+        // 等级信息，使用 <Text> 需要引用 using UnityEngine.UI 名称空间
+        UILevel.GetComponent<Text>().text = "Lv." + this.packageLocalData.level.ToString();
+
+        // 是否新获得
+        UINew.gameObject.SetActive(this.packageLocalData.isNew);
+
+        // 物品的图片，通过配置的路径去加载这个图片
+        Texture2D t = (Texture2D)Resources.Load(this.packageTableItem.imagePath);
+        Sprite temp = Sprite.Create(t, new Rect(0, 0, t.width, t.height), new Vector2(0, 0));
+        UIIcon.GetComponent<Image>().sprite = temp;
+        
+        // 刷新星级
+        RefreshStars();
+    }
+
+    
+    // 刷新星级的方法
+    public void RefreshStars()
+    {
+        for(int i = 0; i < UIStars.childCount; i++)
+        {
+            Transform star = UIStars.GetChild(i);
+            if(this.packageTableItem.star > i)
+            {
+                star.gameObject.SetActive(true);
+            }
+            else
+            {
+                star.gameObject.SetActive(false);
+            }
+        }
+    }
+    ```
+
+3. 在 **PackagePanel 脚本** 中的 **RefresgScroll 刷新滚动容器方法** 中调用 **PackageCell 脚本** 的 **Refresh** 方法，传入这个物品的 **动态数据** 和 **父物体**
+    ```
+    // 使用 GameManager 中封装好的获取本地数据的方法，来拿到当前身上所有的背包数据，并且根据这些数据去初始化滚动容器
+    foreach (PackageLocalItem localData in GameManager.Instance.GetSortPackageLocalData())
+    {
+        Transform PackageUIItem = Instantiate(PackageUIItemPrefab.transform, scrollContent) as Transform;
+        PackageCell packageCell = PackageUIItem.GetComponent<PackageCell>();
+            
+        // 刷新这个物品的状态
+        packageCell.Refresh(localData, this);
+    }
+    ```
+
+4. 编写 **PackagePanel 脚本** 的 **UICloseBtn 按钮** 的点击事件 **OnClickClose()** ，把 **PackagePanel 界面** 关闭。有两种方法都可以，直接调用自身的方法更方便些。点击关闭按钮时就关闭了这个界面，点击 CMCmd 指令时就打开了这个界面
+    ```
+    // PackagePanel 界面的 关闭 按钮
+    private void OnClickClose()
+    {
+        print(">>>>> OnClickClose");
+        ClosePanel();  // 调用自身的关闭方法更方便些
+        //UIManager.Instance.ClosePanel(UIConst.PackagePanel);
     }
     ```

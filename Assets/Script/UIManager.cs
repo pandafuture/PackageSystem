@@ -71,7 +71,8 @@ public class UIManager
         // 把界面路径配置到这映射关系的字典中
         pathDict = new Dictionary<string, string>()
         {
-            // UIConst.Panel_1,"Menu/AllPanel"
+            // 配置 PackagePanel 对应的路径
+            {UIConst.PackagePanel, "Package/PackagePanel" },
         };
     }
 
@@ -150,5 +151,6 @@ public class UIManager
 // 存储界面名称的常量表
 public class UIConst
 {
-    // public const string Panel_1 = "Panel_1Name";
+    // 新增 PackagePanel 常量
+    public const string PackagePanel = "PackagePanel";
 }

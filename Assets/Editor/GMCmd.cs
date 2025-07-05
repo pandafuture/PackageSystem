@@ -54,4 +54,11 @@ public class GMCmd : MonoBehaviour
             Debug.Log(item);
         }
     }
+
+
+    [MenuItem("CMCmd/打开背包主界面")]
+    public static void OpenPackagePanel()
+    {
+        UIManager.Instance.OpenPanel(UIConst.PackagePanel);  // 打开背包界面的指令
+    }
 }
