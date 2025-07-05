@@ -18,6 +18,10 @@ public class PackageCell : MonoBehaviour, IPointerClickHandler, IPointerEnterHan
     private Transform UIStars;
     private Transform UIDeleteSelect;
 
+    // 添加动画相关两个 UI 属性
+    private Transform UISelectAni;
+    private Transform UIMouseOverAni;
+
     private PackageLocalItem packageLocalData;  // 当前物品的动态数据
     private PackageTableItem packageTableItem;  // 当前物品的静态数据
     private PackagePanel uiParent;  // 当前物品的父物品(PackagePanel)
@@ -39,7 +43,15 @@ public class PackageCell : MonoBehaviour, IPointerClickHandler, IPointerEnterHan
         UISelect = transform.Find("Select");
         UIDeleteSelect = transform.Find("DeleteSelect");
 
+        // 绑定动画相关的属性
+        UIMouseOverAni = transform.Find("MouseOverAni");
+        UISelectAni = transform.Find("SelectAni");
+
         UIDeleteSelect.gameObject.SetActive(false);
+
+        // 初始化两个动画相关的属性为关闭状态
+        UIMouseOverAni.gameObject.SetActive(false);
+        UISelectAni.gameObject.SetActive(false);
     }
 
 
@@ -94,6 +106,10 @@ public class PackageCell : MonoBehaviour, IPointerClickHandler, IPointerEnterHan
             return;
         // 如果不一样，则代表点击到了新物品身上，就把 uiParent 的 uid 设置为当前选中物品的 uid ，进而刷新详情界面
         this.uiParent.chooseUID = this.packageLocalData.uid;
+
+        // 播放鼠标选择动效
+        UISelectAni.gameObject.SetActive(true);
+        UISelectAni.GetComponent<Animator>().SetTrigger("In");
     }
 
 
@@ -101,6 +117,10 @@ public class PackageCell : MonoBehaviour, IPointerClickHandler, IPointerEnterHan
     public void OnPointerEnter(PointerEventData eventData)
     {
         Debug.Log("OnPointerEnter: " + eventData.ToString());
+
+        // 播放鼠标进入动效
+        UIMouseOverAni.gameObject.SetActive(true);
+        UIMouseOverAni.GetComponent<Animator>().SetTrigger("In");
     }
 
 
@@ -108,5 +128,8 @@ public class PackageCell : MonoBehaviour, IPointerClickHandler, IPointerEnterHan
     public void OnPointerExit(PointerEventData eventData)
     {
         Debug.Log("OnPointerExit: " + eventData.ToString());
+
+        // 播放鼠标退出动效
+        UIMouseOverAni.GetComponent<Animator>().SetTrigger("Out");
     }
 }

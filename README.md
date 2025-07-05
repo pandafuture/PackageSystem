@@ -1576,3 +1576,82 @@
 
 
 ## 三、交互动效
+1. 先在 **Resources 文件夹** 下创建一个新文件夹 **Ani** ，再在其下创建一个文件夹 **UI** ，用来容纳所有跟 UI 有关的动画
+
+2. 在 **UI 文件夹** 中创建两个动画控制器 **PackageSelect** 和 **PackageMouseOver** 。分别对应 **选中动画** 和 **鼠标掠过动画**
+
+3. 在 **PackageUIItem 预制件** 中添加两个空子物体 **SelectAni** 和 **MouseOverAni**
+
+4. 在 **SelectAni 空子物体** 上添加两张图片 UI ，把 **选中** 图片赋给他， **设置原生大小** ，再设置 **SelectAni 空子物体** 的宽高为 **128/158** ，然后把 **选中 图片UI** 的锚点设置为 **全部伸展模式** 。
+    - 第一张图片 **Image1** 的缩放大小为 **1.1/1.1/1**
+    - 第二张图片 **Image2** 的缩放大小为 **1.2/1.2/1**
+
+5. 在 **UI 动效文件夹** 中创建三个动画器 **PackageSelectAni** 和 **PackageMouseOverIn** 和 **PackageMouseOverOut**
+
+6. 把 **PackageSelect 动画控制器** 挂载到 **SelectAni 空子物体** 上，再把 **PackageSelectAni 动画器** 挂载上去
+
+7. 打开 **PackageSelect 动画控制器** 
+    - 把默认的事件参数设置 **StateMachine 默认状态** 为新创建的 **空** 的状态
+    - 添加一个 **Trigger** 类型的参数 **In**
+    - 把 **Any State** 创建过渡到 **PackageSelectAni** ，并设置过渡条件为 **In** 参数，过渡持续时间设置为 **0**
+
+8. 双击打开 **PackageSelectAni 动画器** 
+    - 点击 **SelectAni 物体** ，在 **动画** 中点击 **添加属性** ，Image1 -> Image -> Color ,Image2 -> Image -> Color
+    - 把 **时间轴** 调至中间，**点击录制** ，把两张图片的 **Color.a 透明度** 设置为 0 ，结束录制
+    - 把开始和结尾的透明度都设为 **0** ，中间的设为 **1**
+    - 把整体时间缩减到 **30s**
+
+9. 把 **PackageMouseOver 动画控制器** 挂载到 **MouseOverAni 空子物体**上，再把 **PackageMouseOverIn 动画器** 和 **PackageMouseOverOut 动画器** 挂载上去
+
+10. 打开 **PackageMouseOver 动画控制器**
+    - 把默认的事件参数设置 **StateMachine 默认状态** 为新创建的 **空** 的状态
+    - 添加两个 **Trigger** 类型的参数 **In** 和 **Out** ，分别用来切换到鼠标进入和鼠标退出两个动画
+    - 把 **Any State** 创建过渡到 **PackageMouseOverIn** ，并设置过渡条件为 **In** 参数，过渡持续时间设置为 **0**
+    - 把 **Any State** 创建过渡到 **PackageMouseOverOut** ,并设置过渡条件为 **Out** 参数，过渡持续时间设置为 **0**
+
+11. 在 **MouseOverAni 空子物体** 上添加一张图片 UI ，把 **选中** 图片赋给他， **设置原生大小** ，再设置 **MouseOverAni 空子物体** 的宽高为 **128/156** ，然后把 **选中 图片UI** 的锚点设置为 **全部伸展模式** 。
+
+12. 隐藏 **SelectAni 空子物体**
+
+13. 点击 **MouseOverAni 空子物体** ，打开 **动画**
+    - 首先是 **PackageMouseOverIn** 动画
+    - **添加属性** Image -> Image -> Color
+    - 把 **时间轴** 调至最开始，**点击录制** ，把图片的 **Color.a 透明度** 设置为 0 ，结束录制
+    - 把整体时间缩减到 **30s**
+    - 再是 **PackageMouseOverOut** 动画
+    - **添加属性** Image -> Image -> Color
+    - 把 **时间轴** 调至结尾，**点击录制** ，把图片的 **Color.a 透明度** 设置为 0 ，结束录制
+    - 把整体时间缩减到 **30s**
+
+14. 在 **PackageCell 脚本** 中添加动画相关两个 UI 属性，并在 **InitUIName()** 中绑定这两个属性，并初始化设置为关闭状态
+    ```
+    // 绑定动画相关的属性
+    UIMouseOverAni = transform.Find("MouseOverAni");
+    UISelectAni = transform.Find("SelectAni");
+
+    // 初始化两个动画相关的属性为关闭状态
+    UIMouseOverAni.gameObject.SetActive(false);
+    UISelectAni.gameObject.SetActive(false);
+    ```
+
+15. 在 **PakcageCell 脚本** 中的鼠标点击的回调方法，对 **UISelectAni** 设置 **In** 这个 Trigger 参数来播放鼠标选择动画
+    ```
+    // 播放鼠标选择动效
+    UISelectAni.gameObject.SetActive(true);
+    UISelectAni.GetComponent<Animator>().SetTrigger("In");
+    ```
+
+16. 在 **PakcageCell 脚本** 中的鼠标进入的回调方法，对 **UIMouseOverAni** 设置 **In** 这个 Trigger 参数来播放鼠标进入动画
+    ```
+    // 播放鼠标进入动效
+    UIMouseOverAni.gameObject.SetActive(true);
+    UIMouseOverAni.GetComponent<Animator>().SetTrigger("In");
+    ```
+
+17. 在 **PakcageCell 脚本** 中的鼠标进入的回调方法，对 **UIMouseOverAni** 设置 **Out** 这个 Trigger 参数来播放鼠标退出动画
+    ```
+    // 播放鼠标退出动效
+    UIMouseOverAni.GetComponent<Animator>().SetTrigger("Out");
+    ```
+
+18. 在左上角的搜索框中搜索 **Image** 这个组件，把除了 **PackageUIItem** 以外的所有 **Image** 全部选中，然后把它的 **光线投射目标** 选项勾选给去掉，以确保子物品不会影响我们点触事件的判断
