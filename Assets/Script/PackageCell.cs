@@ -1,11 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;  // 添加引用 UI 的名称空间
 
 
 // 用来管理背包中每一个单独的子物品
-public class PackageCell : MonoBehaviour
+// 让 PackageCell 类继承三个接口，分别对应鼠标的点击、进入、退出三种回调方式
+public class PackageCell : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
 {
     // 添加物品的 UI 属性
     private Transform UIIcon;
@@ -78,5 +80,33 @@ public class PackageCell : MonoBehaviour
                 star.gameObject.SetActive(false);
             }
         }
+    }
+
+
+    // 实现鼠标点击的回调方法
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        // 打印当前执行的方法的方法名以及这一数据
+        Debug.Log("OnPointerClick: " + eventData.ToString());
+
+        // 判断当前点击选中的物品是否和父物品的 uid 一样，如果一样则代表是重复点击，不执行任何逻辑
+        if (this.uiParent.chooseUID == this.packageLocalData.uid)
+            return;
+        // 如果不一样，则代表点击到了新物品身上，就把 uiParent 的 uid 设置为当前选中物品的 uid ，进而刷新详情界面
+        this.uiParent.chooseUID = this.packageLocalData.uid;
+    }
+
+
+    // 实现鼠标进入的回调方法
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        Debug.Log("OnPointerEnter: " + eventData.ToString());
+    }
+
+
+    // 实现鼠标退出的回调方法
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        Debug.Log("OnPointerExit: " + eventData.ToString());
     }
 }

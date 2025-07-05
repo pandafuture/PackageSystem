@@ -28,6 +28,25 @@ public class PackagePanel : BasePanel  // PackagePanle 继承自 BasePanel
     // 背包子物体预制件属性
     public GameObject PackageUIItemPrefab;
 
+    // 记录当前选中的是哪一个物品
+    private string _chooseUid;  // 表示当前选中的物品是哪一个 uid
+
+
+    // 外部使用时，则使用不带下滑线的 chooseUID ，用来获取当前选中的物品是哪个并从外部选择这个物品并设置这个物品的 Uid
+    public string chooseUID
+    {
+        get
+        {
+            return _chooseUid;
+        }
+        set
+        {
+            // 如果获取到一个新的值，就刷新整个详情界面
+            _chooseUid = value;
+            RefreshDetail();  // 调用刷新详情界面的方法
+        }
+    }
+
 
     override protected void Awake()
     {
@@ -54,6 +73,17 @@ public class PackagePanel : BasePanel  // PackagePanle 继承自 BasePanel
     private void RefreshUI()
     {
         RefreshScroll();  // 刷新滚动容器
+    }
+
+
+    // 刷新详情界面的方法
+    private void RefreshDetail()
+    {
+        // 找到 uid 对应的动态数据
+        PackageLocalItem localItem = GameManager.Instance.GetPackageLocalItemByUId(chooseUID);
+
+        // 刷新详情界面
+        UIDetailPanel.GetComponent<PackageDetail>().Refresh(localItem, this);
     }
 
 

@@ -137,7 +137,7 @@
 5. 设置上部 **Top** 的内容
     1. 在 **Top** 下创建一个背景图片 **Bg** ，设置颜色 **175/155/197** ，设置锚点 **全部伸展模式**
 
-    2. 在 **Top** 下创建一个文本（旧版） **Title** , 设置文本内容 **武器** ，设置宽高 **160/70** ，设置位置 **X -88 / Y 0** ，设置字体大小 **55** ，设置字体样式 **加粗** ，设置对齐 **行间居中对齐** ，设置字体颜色为 **白色**
+    2. 在 **Top** 下创建一个文本（旧版） **Title** , 设置文本内容 **武器** ，设置宽高 **400/70** ，设置位置 **X 0 / Y 0** ，设置字体大小 **55** ，设置字体样式 **加粗** ，设置对齐 **行间居中对齐** ，设置字体颜色为 **白色**
 
 6. 设置底部 **Bottom** 的内容
     1. 在 **Bottom** 下创建一个背景图片 **Bg** ，设置颜色为 **淡黄色** ，设置锚点为 **全部伸展模式**
@@ -1349,3 +1349,230 @@
         //UIManager.Instance.ClosePanel(UIConst.PackagePanel);
     }
     ```
+
+
+
+
+# 物品交互和物品详情
+
+## 一、点击响应
+背包交互中会用到鼠标 **点击**、 **进入**、 **退出** 三种回调方法
+
+1. 在 **PackageCell 脚本** 中让 **PackageCell 类** 继承三个接口，分别对应鼠标的 **点击** 、**进入** 、**退出** 三种回调方法
+    ```
+    // 用来管理背包中每一个单独的子物品
+    // 让 PackageCell 类继承三个接口，分别对应鼠标的点击、进入、退出三种回调方式
+    public class PackageCell : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
+    {
+        ......
+    }
+    ```
+
+2. 在 **PackageCell 脚本** 中实现三个接口对应的方法，然后运行测试一下
+    ```
+    // 实现鼠标点击的回调方法
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        // 打印当前执行的方法的方法名以及这一数据
+        Debug.Log("OnPointerClick: " + eventData.ToString());
+    }
+
+
+    // 实现鼠标进入的回调方法
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        Debug.Log("OnPointerEnter: " + eventData.ToString());
+    }
+
+
+    // 实现鼠标退出的回调方法
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        Debug.Log("OnPointerExit: " + eventData.ToString());
+    }
+    ```
+
+
+## 二、详情界面
+1. 打开 **PackagePanel 预制件** ，在 **Script** 中新建一个脚本 **PackageDetail** 并把他挂载到 **DetailPanel 详情界面** 上
+
+2. 在 **PackageDetail 脚本** 中先给 **PackageDetail 类** 添加属性，即 **所有的 UI 子节点**
+    ```
+    public class PackageDetail : MonoBehaviour
+    {
+        // 先给 PackageDetail 类添加属性，即所有的 UI 子节点
+        private Transform UIStars;
+        private Transform UIDescription;
+        private Transform UIIcon;
+        private Transform UITitle;
+        private Transform UILecelText;
+        private Transform UISkillDescription;
+    }
+    ```
+
+3. 作为背包物品的展示区，要先拿到这个物品的动态信息、静态信息、整个背包的父逻辑（uiParent)
+    ```
+    // 作为背包物品的展示区，要先拿到这个物品的动态信息、静态信息、整个背包的父逻辑（uiParent)
+    private PackageLocalItem packageLocalData;
+    private PackageTableItem packageTableItem;
+    private PackagePanel uiParent;
+    ```
+
+4. 对这些属性进行初始化
+    ```
+    // 对这些属性进行初始化
+    private void Awake()
+    {
+        InitUIName();
+    }
+
+    private void InitUIName()
+    {
+        // 使用 transform.Find() 找到物品对应的路径
+        UIStars = transform.Find("Center/Stars");
+        UIDescription = transform.Find("Center/Description");
+        UIIcon = transform.Find("Center/Icon");
+        UITitle = transform.Find("Top/Title");
+        UILevelText = transform.Find("Bottom/LevelPnl/LevelText");
+        UISkillDescription = transform.Find("Bottom/Description");
+    }
+    ```
+
+5. 写一个刷新整个详情界面的主体方法，通过 **传入一个动态数据和 uiParent** 来实现整个详情界面的刷新
+    - **初始化** ：动态数据、静态数据、父物体逻辑
+    - 对 UI 的组件信息进行初始化
+        - 等级
+        - 简短描述
+        - 详细描述
+        - 物品描述
+        - 图片加载
+        - 刷新星级（使用独立方法）
+    ```
+    public void Refresh(PackageLocalItem packageLocalData, PackagePanel uiParent)
+    {
+        // 初始化：动态数据、静态数据、父物体逻辑
+        this.packageLocalData = packageLocalData;
+        this.packageTableItem = GameManager.Instance.GetPackageItemById(packageLocalData.id);
+        this.uiParent = uiParent;
+
+
+        // 对 UI 组件的信息进行初始化
+        // 等级
+        UILevelText.GetComponent<Text>().text = string.Format("Lv.{0}/40", this.packageLocalData.level.ToString());
+
+        // 简短描述
+        UIDescription.GetComponent<Text>().text = this.packageTableItem.description;
+
+        // 详细描述
+        UISkillDescription.GetComponent<Text>().text = this.packageTableItem.skillDescription;
+
+        // 物品名称
+        UITitle.GetComponent<Text>().text = this.packageTableItem.name;
+
+        // 图片加载
+        Texture2D t = (Texture2D)Resources.Load(this.packageTableItem.imagePath);
+        Sprite temp = Sprite.Create(t, new Rect(0, 0, t.width, t.height), new Vector2(0, 0));
+        UIIcon.GetComponent<Image>().sprite = temp;
+
+        // 刷新星级
+        RefreshStars();
+
+    }
+
+
+    // 刷新星级的方法
+    public void RefreshStars()
+    {
+        for(int i = 0; i < UIStars.childCount; i++)
+        {
+            Transform star = UIStars.GetChild(i);
+            if (this.packageTableItem.star > i)
+            {
+                star.gameObject.SetActive(true);
+            }
+            else
+            {
+                star.gameObject.SetActive(false);
+            }
+        }
+    }
+    ```
+
+6. 测试目前详情界面的主体逻辑。创建一个 **Test()** 方法，在 **Awake()** 中调用。运行游戏后，若能显示第一个物品的详情界面则说明逻辑正确
+    ```
+    // 对这些属性进行初始化
+    private void Awake()
+    {
+        InitUIName();
+
+        // 用于验证此模块逻辑是否正确
+        Test();
+    }
+
+
+    // 测试方法
+    private void Test()
+    {
+        // 传入某一个物品的动态信息来对整个详情界面进行初始化
+        Refresh(GameManager.Instance.GetPackageLocalData()[1], null);
+    }
+    ```
+
+7. 在交互过程中需要记录当前选中的是哪一个物品
+    - 在 **PackagePanel 脚本** 中添加 **_chooseUid** 表示当前选中的物品是哪一个 uid
+    - 外部使用时，则使用不带下滑线的 **chooseUID** ，用来获取当前选中的物品是哪个并从外部选择这个物品并设置这个物品的 Uid
+    - 如果获取到一个新的值，就调用 **RefreshDetail()** 刷新整个详情界面
+    ```
+    // 记录当前选中的是哪一个物品
+    private string _chooseUid;  // 表示当前选中的物品是哪一个 uid
+
+
+    // 外部使用时，则使用不带下滑线的 chooseUID ，用来获取当前选中的物品是哪个并从外部选择这个物品并设置这个物品的 Uid
+    public string chooseUID
+    {
+        get
+        {
+            return _chooseUid;
+        }
+        set
+        {
+            // 如果获取到一个新的值，就刷新整个详情界面
+            _chooseUid = value;
+            RefreshDetail(); // 调用刷新详情界面的方法
+        }
+    }
+    ```
+
+8. 编写刷新详情界面的方法 **RefreshDetail()**
+    ```
+    // 刷新详情界面的方法
+    private void RefreshDetail()
+    {
+        // 找到 uid 对应的动态数据
+        PackageLocalItem localItem = GameManager.Instance.GetPackageLocalItemByUId(chooseUID);
+
+        // 刷新详情界面
+        UIDetailPanel.GetComponent<PackageDetail>().Refresh(localItem, this);
+    }
+    ```
+
+9. 在 **PackageCell 脚本** 中的 **鼠标点击的回调方法** 中实现刷新详情界面的鼠标交互事件
+    - 判断当前点击选中的物品是否和父物品的 uid 一样，如果一样则代表是重复点击，不执行任何逻辑
+    - 如果不一样，则代表点击到了新物品身上，就把 uiParent 的 uid 设置为当前选中物品的 uid ，进而刷新详情界面
+    ```
+    // 实现鼠标点击的回调方法
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        // 打印当前执行的方法的方法名以及这一数据
+        Debug.Log("OnPointerClick: " + eventData.ToString());
+
+        // 判断当前点击选中的物品是否和父物品的 uid 一样，如果一样则代表是重复点击，不执行任何逻辑
+        if (this.uiParent.chooseUID == this.packageLocalData.uid)
+            return;
+        // 如果不一样，则代表点击到了新物品身上，就把 uiParent 的 uid 设置为当前选中物品的 uid ，进而刷新详情界面
+        this.uiParent.chooseUID = this.packageLocalData.uid;
+    }
+    ```
+
+
+## 三、交互动效
