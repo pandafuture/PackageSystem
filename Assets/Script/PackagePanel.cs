@@ -4,6 +4,16 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+
+// 将背包界面设置为三个模式
+public enum PackageMode
+{
+    normal,  // 普通模式
+    delete,  // 删除模式
+    sort,  //排序模式（未来可拓展实现）
+}
+
+
 public class PackagePanel : BasePanel  // PackagePanle 继承自 BasePanel
 {
     // 对各个 UI 组件的属性进行初始化
@@ -28,6 +38,12 @@ public class PackagePanel : BasePanel  // PackagePanle 继承自 BasePanel
     // 背包子物体预制件属性
     public GameObject PackageUIItemPrefab;
 
+    // 用来表示当前背包界面处于哪个状态
+    public PackageMode curMode = PackageMode.normal;
+
+    // 用来容纳选择删除时，所有被选中的物品的 uid
+    public List<string> deleteChooseUid;
+
     // 记录当前选中的是哪一个物品
     private string _chooseUid;  // 表示当前选中的物品是哪一个 uid
 
@@ -44,6 +60,35 @@ public class PackagePanel : BasePanel  // PackagePanle 继承自 BasePanel
             // 如果获取到一个新的值，就刷新整个详情界面
             _chooseUid = value;
             RefreshDetail();  // 调用刷新详情界面的方法
+        }
+    }
+
+
+    // 给外部提供一个方法，用来添加删除选中项到 List<string> deleteChooseUid 中
+    public void AddChooseDeleteUid(string uid)
+    {
+        this.deleteChooseUid ??= new List<string>();
+        if (!this.deleteChooseUid.Contains(uid))
+        {
+            this.deleteChooseUid.Add(uid);
+        }
+        else
+        {
+            this.deleteChooseUid.Remove(uid);
+        }
+        RefreshDeletePanel();
+    }
+
+
+    // 刷新整个界面的删除状态
+    private void RefreshDeletePanel()
+    {
+        RectTransform scrollContent = UIScrollView.GetComponent<ScrollRect>().content;
+        foreach(Transform cell in scrollContent)
+        {
+            PackageCell packageCell = cell.GetComponent<PackageCell>();
+            // 刷新物品选中状态
+            packageCell.RefreshDeleteState();
         }
     }
 
@@ -137,7 +182,7 @@ public class PackagePanel : BasePanel  // PackagePanle 继承自 BasePanel
 
         // 对子物体 DeletePanel 和 BottomMenus 的可见性初始化为不可见
         UIDeletePanel.gameObject.SetActive(false);
-        UIBottomMenus.gameObject.SetActive(false);
+        UIBottomMenus.gameObject.SetActive(true);
     }
 
 
@@ -173,6 +218,9 @@ public class PackagePanel : BasePanel  // PackagePanle 继承自 BasePanel
         print(">>>>> OnClickClose");
         ClosePanel();  // 调用自身的关闭方法更方便些
         //UIManager.Instance.ClosePanel(UIConst.PackagePanel);
+
+        // 关闭背包界面后打开主界面，即返回主界面
+        UIManager.Instance.OpenPanel(UIConst.MainPanel);
     }
     private void OnClickLeft()
     {
@@ -182,17 +230,49 @@ public class PackagePanel : BasePanel  // PackagePanle 继承自 BasePanel
     {
         print(">>>>> OnClickRight");
     }
+
+    
+    // 在删除界面中点击返回按钮，就退出删除模式
     private void OnDeleteBack()
     {
         print(">>>>> OnDeleteBack");
+        curMode = PackageMode.normal;  // 背包界面状态回到普通状态
+        UIDeletePanel.gameObject.SetActive(false);  // 关闭删除界面
+        // 退出删除模式后要重置选中的删除列表
+        deleteChooseUid = new List<string>();
+        // 最后刷新整个界面中删除物品的选中状态
+        RefreshDeletePanel();
     }
+
+
+    // 确认删除
     private void OnDeleteConfirm()
     {
         print(">>>>> OnDeleteConfirm");
+
+        // 先进行合法性判断
+        if(this.deleteChooseUid == null)
+        {
+            return;
+        }
+        if(this.deleteChooseUid.Count == 0)
+        {
+            return;
+        }
+
+        // 执行删除操作
+        GameManager.Instance.DeletePackageItems(this.deleteChooseUid);
+        // 删除完成后刷新整个背包界面
+        RefreshUI();
     }
+
+
+    // 点击左下角的删除按钮，进入删除模式
     private void OnDelete()
     {
         print(">>>>> OnDelete");
+        curMode = PackageMode.delete;  // 背包界面状态进入删除模式
+        UIDeletePanel.gameObject.SetActive(true);  // 打开删除界面
     }
     private void OnDetail()
     {

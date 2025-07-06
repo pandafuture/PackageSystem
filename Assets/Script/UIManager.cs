@@ -73,6 +73,12 @@ public class UIManager
         {
             // 配置 PackagePanel 对应的路径
             {UIConst.PackagePanel, "Package/PackagePanel" },
+
+            // 配置 LotteryPanel 对应的路径
+            {UIConst.LotteryPanel, "Lottery/LotteryPanel" },
+
+            // 配置 MainPanel 对应的路径
+            {UIConst.MainPanel, "MainPanel" },
         };
     }
 
@@ -153,4 +159,8 @@ public class UIConst
 {
     // 新增 PackagePanel 常量
     public const string PackagePanel = "PackagePanel";
+    // 新增 抽卡界面常量
+    public const string LotteryPanel = "LotteryPanel";
+    // 新增 主界面常量
+    public const string MainPanel = "MainPanel";
 }

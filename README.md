@@ -962,7 +962,7 @@
 
             // 对子物体 DeletePanel 和 BottomMenus 的可见性初始化为不可见
             UIDeletePanel.gameObject.SetActive(false);
-            UIBottomMenus.gameObject.SetActive(false);
+            UIBottomMenus.gameObject.SetActive(true);
         }
 
         ```
@@ -1655,3 +1655,773 @@
     ```
 
 18. 在左上角的搜索框中搜索 **Image** 这个组件，把除了 **PackageUIItem** 以外的所有 **Image** 全部选中，然后把它的 **光线投射目标** 选项勾选给去掉，以确保子物品不会影响我们点触事件的判断
+
+
+
+# 抽卡和删除物品
+
+## 一、抽卡界面
+1. 首先在 **Canvas 画布** 下创建一个新的空物体 **LotteryPanel** 。锚点设置为 **拉伸模式**
+
+2. 在 **LotteryPanel** 下创建一个空物体 **TopRight** 作为关闭按钮。锚点设置为 **右上角** ，位置设置为 **X 0 / Y 0**
+
+3. 在 **TopRight** 下新建一个图片 **Close** ，把图片 **关闭** 赋给他，**设置原生大小** ，添加 **Button 组件** ，设置位置为 ** X -130 / Y -124**
+
+4. 在 **LotteryPanel** 下创建一个空物体 **Bottom** ，锚点设置为 **底部居中** ，位置 Y 为 **0**
+
+5. 在 **Buttom** 下新建一个按钮（旧版） **Lottery10** ，设置宽高为 **250/60** ，颜色为 **98/115/127** ，位置为 **X -161 / Y 62** ，文本内容为 **十抽** ，字体样式为 **加粗** ，字体大小为 **30** ，字体颜色为 **纯白色**
+
+6. 复制一份 **十抽** 按钮，名字改为 **一抽 Lottery1** ，位置设置为 **X 157 / Y 62** ，文本内容为 **单抽** 
+
+7. 在 **LotteryPanel** 下创建一个空物体 **Center** ，用来展示抽到了哪些卡，锚点就为 **居中** 不用改，宽高设置为 **1600/600**
+    - 添加对齐组件 **Grid Layout Group** ，设置单元格大小为 **155/500** ，间距 X 为 **5** ，子级对齐为 **Middle Center**
+
+8. 在 **Center** 下添加一张图片 **LotteryItem** ，然后复制十份
+    - 把第一个 **LotteryItem** 的颜色设为 **97/117/133/200** ，在其下新创建一个空物体 **Bottom** ，锚点设置为 **底部居中** ，位置 Y 为 **0**
+    - 把星级预制件 **Stars 预制件** 拖到 **Bottom** 下
+
+9. 在 第一个 **LotterryItem** 下新创建一个空物体 **Center**
+    - 在其下创建一张图片 **Image** ，把一张 **武器** 的图片赋给他，**设置原生大小**
+
+10. 删除其他九个 **LotteryItem**
+
+11. 在 **Prefab 文件夹** 下新创建一个文件夹 **Lottery 文件夹** ，把 **LotteryItem** 放进去做成预制件
+
+12. 复制九个 **LotteryItem** 共十个
+
+13. 最后把 **LotteryPanel** 也放进 **Lottery 文件夹** 中做成预制件
+
+
+## 二、主界面
+1. 在 **Canvas 画布** 下创建一个空物体 **MainPanel** ，锚点设置为 **全部拉伸** ，再在 **MainPanel** 下创建一个空物体 **Top** ，设置锚点为 **顶部居中** ，位置 Y 为 **0**
+
+2. 在 **Top** 下创建一个按钮（旧版） **LotteryBtn** ，宽高为 **300/150** ，颜色为 **103/160/219/255** ，位置为 **-180/-104**文本内容为 **抽卡** ，字体大小为 **80** ，字体颜色为 **纯黑**
+
+3. 复制一份 **LotteryBtn** 名字改为 **PackageBtn** ，位置 X 改为 **181** ，文本内容改为 **背包**
+
+4. 在 **MainPanel** 下创建一个空物体 **BottomLeft** ，锚点设置为 **左下角** ，位置为 **X 0 / Y 0**
+
+5. 在 **BottomLeft** 下创建一个按钮（旧版） **QuitBtn** ，颜色设置为 **103/160/219/255** ，位置为 **127/67** ，文本内容为 **退出游戏** ，字体样式为 **加粗** ，字体大小为 **40**
+
+6. 把 **MainPanel** 放进 **Prefab 文件夹** 的 **Panel 文件夹** 中做成预制件
+
+
+## 三、抽卡逻辑
+1. 在 **GameManager 脚本** 中在 **GameManager 类** 外写一个存储物品类型的常量表 **GameConst**
+    ```
+    // 存储物品类型的常量表
+    public class GameConst
+    {
+        // 武器类型常量
+        public const int PackageTypeWeapon = 1;
+        // 食物类型常量
+        public const int PackageTypeFood = 2;
+    }
+    ```
+
+2. 在 **GameManager 脚本** 中添加一个新方法 **GetPackageTableByType()** 来获取不同类型的所有数据
+    ```
+    // 根据物品类型获取配置的表格数据
+    // 1：武器， 2：食物
+    public List<PackageTableItem> GetPackageTableByType(int type)
+    {
+        List<PackageTableItem> packageItems = new List<PackageTableItem>();
+        foreach(PackageTableItem packageItem in GetPackageTable().DataList)
+        {
+            if(packageItem.type == type)
+            {
+                packageItems.Add(packageItem);
+            }
+        }
+        return packageItems;
+    }
+    ```
+
+3. 在 **GameManager 脚本** 中写抽卡的具体逻辑（单抽）
+    ```
+    // 抽卡的具体逻辑（单抽）
+    public PackageLocalItem GetLotteryRandom1()
+    {
+        // 获取所有武器的表格数据
+        List<PackageTableItem> packageItems = GetPackageTableByType(GameConst.PackageTypeWeapon);
+        // 从中随机抽取一件武器
+        int index = Random.Range(0, packageItems.Count);
+        PackageTableItem packageItem = packageItems[index];
+        // 把这个武器初始化为动态数据，作为最终结果返回给玩家
+        PackageLocalItem packageLocalItem = new()
+        {
+            uid = System.Guid.NewGuid().ToString(),
+            id = packageItem.id,
+            num = 1,
+            level = 1,
+            isNew = false,
+        };
+        // 把抽到的卡进行存档，用 PackageLocalData 进行保存，最终以 Json 格式存储在本地的文本文件中
+        PackageLocalData.Instance.items.Add(packageLocalItem);
+        PackageLocalData.Instance.savePackage();
+        return packageLocalItem;
+    }
+    ```
+
+4. 在 **GameManager 脚本** 中写一个判断武器是不是新获得的方法，再修改抽卡具体逻辑（单抽） **GetLotteryRandom1** 中的 **isNew** 判断
+    ```
+    // 判断武器是不是新获得的
+    public bool CheckWeaponIsNew(int id)
+    {
+        foreach(PackageLocalItem packageLocalItem in GetPackageLocalData())
+        {
+            if(packageLocalItem.id == id)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+    ```
+
+    ```
+    isNew = CheckWeaponIsNew(packageItem.id),
+    ```
+
+5. 在 **GameManager 脚本** 中写 **十抽** 的具体逻辑
+    ```
+    // 十抽
+    public List<PackageLocalItem> GetLotteryDandom10(bool sort = false)
+    {
+        // 随机抽卡
+        List<PackageLocalItem> packageLocalItems = new();
+        for(int i = 0; i < 10; i++)
+        {
+            PackageLocalItem packageLocalItem = GetLotteryRandom1();
+            packageLocalItems.Add(packageLocalItem);
+        }
+        // 武器排序
+        if (sort)
+        {
+            packageLocalItems.Sort(new PackageItemComparer());
+        }
+        return packageLocalItems;
+    }
+    ```
+
+6. 在 **Script** 中新建一个脚本 **LotteryPanel** ，并把它挂载到 **LotteryPanel 预制件** 上
+
+7. 在 **LotteryPanel 脚本** 中先初始化 UI
+    - 添加 UI 属性，即 UI 子组件
+        ```
+        private Transform UIClose;
+        private Transform UICenter;
+        private Transform UILottery10;
+        private Transform UILottery1;
+        private GameObject LotteryCellPrefab;
+        ```
+    - 找到物品对应的路径，并注册 **十抽按钮** 和 **单抽按钮** 的点击事件  
+     **注意** ：要使用按钮需要引用 UI 的名称空间
+        ```
+        using UnityEngine.UI;  // 添加引用 UI 的名称空间
+
+
+        private void InitUI()
+        {
+            UIClose = transform.Find("TopRight/Close");
+            UICenter = transform.Find("Center");
+            UILottery10 = transform.Find("Bottom/Lottery10");
+            UILottery1 = transform.Find("Bottom/Lottery1");
+
+            // 注册点击按钮事件，需要添加引用 UI 的名称空间
+            UILottery10.GetComponent<Button>().onClick.AddListener(OnLottery10Btn);  // 十抽按钮
+            UILottery1.GetComponent<Button>().onClick.AddListener(OnLottery1Btn);  // 单抽按钮
+            // 注册退出按钮的点击事件
+            UIClose.GetComponent<Button>().onClick.AddListener(OnClose);
+        }
+        ```
+    - 添加点击事件
+        ```
+        // 添加点击事件
+        // 十抽按钮
+        private void OnLottery10Btn()
+        {
+            print(">>>>>>>>>> OnLottery10Btn");
+        }
+
+
+        // 单抽按钮
+        private void OnLottery1Btn()
+        {
+            print(">>>>>>>>>> OnLottery1Btn");
+        }
+
+
+        // 关闭按钮
+        private void OnClose()
+        {
+            print(">>>>>>>>>> OnClose");
+        }
+        ```
+    - 在 **Awake()** 中调用初始化方法
+        ```
+        protected override void Awake()
+        {
+            base.Awake();
+            InitUI();
+        }
+        ```
+    - 把 **LotteryPanel 类** 改为继承自 **BasePanel**
+        ```
+        public class LotteryPanel : BasePanel  // 继承的父类改为 BasePanel
+        ```
+    - 初始化抽卡物品的子物品的预制件
+        ```
+        protected override void Awake()
+        {
+            base.Awake();
+            // 初始化 UI
+            InitUI();
+
+            // 对抽卡物品的子物品的预制件初始化
+            InitPrefab();
+        }
+        ```
+        ```
+        // 初始化抽卡物品的子物品的预制体
+        private void InitPrefab()
+        {
+            LotteryCellPrefab = Resources.Load("Prefab/Panel/Lottery/LotteryItem") as GameObject;
+        }
+        ```
+
+8. 在 **UIManager 脚本** 中对抽卡界面进行配置
+    - 在 **存储界面变量的常量表** 中新增 **抽卡界面常量**
+        ```
+        // 存储界面名称的常量表
+        public class UIConst
+        {
+            // 新增 PackagePanel 常量
+            public const string PackagePanel = "PackagePanel";
+            // 新增 抽卡界面常量
+            public const string LotteryPanel = "LotteryPanel";
+        }
+        ```
+    - 在 **界面缓存字典** 中，把 **抽卡界面的路径** 配置到字典中
+        ```
+        // 初始化字典
+        private void InitDicts()
+        {
+            // 初始化预制件字典
+            prefabDict = new Dictionary<string, GameObject>();
+            // 初始化界面缓存字典
+            panelDict = new Dictionary<string, BasePanel>();
+            // 把界面路径配置到这映射关系的字典中
+            pathDict = new Dictionary<string, string>()
+            {
+                // 配置 PackagePanel 对应的路径
+                {UIConst.PackagePanel, "Package/PackagePanel" },
+
+                // 配置 LotteryPanel 对应的路径
+                {UIConst.LotteryPanel, "Lottery/LotteryPanel" },
+            };
+        }
+        ```
+
+9. 在 **GameMangaer 脚本** 中先打开 **抽卡界面**进行测试
+    ```
+    void Start()
+    {
+        // 先主动打开抽卡界面进行测试
+        UIManager.Instance.OpenPanel(UIConst.LotteryPanel);
+
+        // 主动打开背包界面
+        //UIManager.Instance.OpenPanel(UIConst.PackagePanel);  // 调用 UIManager 实例中打开界面的方法，同时传入 PackagePanel 背包界面常量名，打开背包界面
+    }
+    ```
+
+## 四、主界面逻辑
+1. 在 **Script 文件夹** 中创建一个新脚本 **MainPanel** ，并把它挂载到 **MainPanel 预制件** 上
+
+2. 在 **MainPanel 脚本** 把 **MainPanel 类** 继承改为 **BasePanel**
+    ```
+    public class MainPanel : BasePanel  // 继承改为 BasePanel
+    {
+        
+    }
+    ```
+
+3. 在 **MainPanel 脚本** 中先 **初始化 UI**
+    - 添加 UI 属性，即 UI 子组件
+        ```
+        // 初始化 UI
+        private Transform UILottery;
+        private Transform UIPackage;
+        private Transform UIQuitBtn;
+        ```
+    - 找到物品对应的路径，并注册按钮的点击事件，然后再 **Awake()** 中调用初始化
+    注意 ：要使用按钮需要引用 UI 的名称空间
+        ```
+        protected override void Awake()
+        {
+            base.Awake();
+
+            // 初始化 UI
+            InitUI();
+        }
+
+
+        // 初始化 UI
+        protected void InitUI()
+        {
+            UILottery = transform.Find("Top/LotteryBtn");
+            UIPackage = transform.Find("Top/PackageBtn");
+            UIQuitBtn = transform.Find("BottomLeft/QuitBtn");
+
+            UILottery.GetComponent<Button>().onClick.AddListener(OnBtnLottery);
+            UIPackage.GetComponent<Button>().onClick.AddListener(OnBtnPackage);
+            UIQuitBtn.GetComponent<Button>().onClick.AddListener(OnQuitGame);
+        }
+        ```
+    - 添加三个按钮的点击事件  
+    **注意** ：**退出游戏按钮** 实现时需要引用 **using UnityEditor** 名称空间
+        ```
+            using UnityEditor;  // 添加 UnityEditor 名称空间
+
+
+            // 打开抽卡界面按钮
+            private void OnBtnLottery()
+            {
+                print(">>>>> OnBtnLottery");
+                UIManager.Instance.OpenPanel(UIConst.LotteryPanel);
+                ClosePanel();
+            }
+
+
+            // 打开背包界面按钮
+            private void OnBtnPackage()
+            {
+                print(">>>>> OnBtnPackage");
+                UIManager.Instance.OpenPanel(UIConst.PackagePanel);
+                ClosePanel();
+            }
+
+
+            // 退出游戏按钮，需要添加 UnityEditor 名称空间
+            private void OnQuitGame()
+            {
+                print(">>>>> OnQuitGame");
+        #if UNITY_EDITOR
+                EditorApplication.isPlaying = false;
+        #else
+                Application.Quit();
+        #endif
+            }
+        ```
+
+4. 在 **UIManager 脚本** 中对主界面进行配置
+    - 在 **存储界面变量的常量表** 中新增 **主界面常量**
+        ```
+        // 存储界面名称的常量表
+        public class UIConst
+        {
+            // 新增 PackagePanel 常量
+            public const string PackagePanel = "PackagePanel";
+            // 新增 抽卡界面常量
+            public const string LotteryPanel = "LotteryPanel";
+            // 新增 主界面常量
+            public const string MainPanel = "MainPanel";
+        }
+        ```
+    - 在 **界面缓存字典** 中，把 **主界面的路径** 配置到字典中
+        ```
+        // 初始化字典
+        private void InitDicts()
+        {
+            // 初始化预制件字典
+            prefabDict = new Dictionary<string, GameObject>();
+            // 初始化界面缓存字典
+            panelDict = new Dictionary<string, BasePanel>();
+            // 把界面路径配置到这映射关系的字典中
+            pathDict = new Dictionary<string, string>()
+            {
+                // 配置 PackagePanel 对应的路径
+                {UIConst.PackagePanel, "Package/PackagePanel" },
+
+                // 配置 LotteryPanel 对应的路径
+                {UIConst.LotteryPanel, "Lottery/LotteryPanel" },
+
+                // 配置 MainPanel 对应的路径
+                {UIConst.MainPanel, "MainPanel" },
+            };
+        }
+        ```
+
+5. 在 **GameMangaer 脚本** 中先打开 **主界面**进行测试
+    ```
+    void Start()
+    {
+        // 先主动打开主界面进行测试
+        UIManager.Instance.OpenPanel(UIConst.MainPanel);
+
+        // 先主动打开抽卡界面进行测试
+        //UIManager.Instance.OpenPanel(UIConst.LotteryPanel);
+
+        // 主动打开背包界面
+        //UIManager.Instance.OpenPanel(UIConst.PackagePanel);  // 调用 UIManager 实例中打开界面的方法，同时传入 PackagePanel 背包界面常量名，打开背包界面
+    }
+    ```
+
+6. 修改 **抽卡界面 LotteryPanel 脚本** 和 **背包界面 PackagePanel 脚本** 的关闭按钮响应事件。界面关闭后应返回主界面
+    ```
+    // 关闭按钮
+    private void OnClose()
+    {
+        print(">>>>>>>>>> OnClose");
+        // 抽卡界面关闭时也应该打开主界面，即返回主界面
+        ClosePanel();
+        UIManager.Instance.OpenPanel(UIConst.MainPanel);
+    }
+    ```
+    ```
+    // PackagePanel 界面的 关闭 按钮
+    private void OnClickClose()
+    {
+        print(">>>>> OnClickClose");
+        ClosePanel();  // 调用自身的关闭方法更方便些
+        //UIManager.Instance.ClosePanel(UIConst.PackagePanel);
+
+        // 关闭背包界面后打开主界面，即返回主界面
+        UIManager.Instance.OpenPanel(UIConst.MainPanel);
+    }
+    ```
+
+## 五、完善抽卡逻辑
+1. 在 **LotteryPanel 脚本** 中完善 **单抽** 按钮的逻辑
+    ```
+    // 单抽按钮
+    private void OnLottery1Btn()
+    {
+        print(">>>>>>>>>> OnLottery1Btn");
+
+        // 先销毁整个容器中原本的所有卡片
+        for(int i = 0; i < UICenter.childCount; i++)
+        {
+            Destroy(UICenter.GetChild(i).gameObject);
+        }
+        // 再抽卡获得一张新的物品
+        PackageLocalItem item = GameManager.Instance.GetLotteryRandom1();
+    }
+    ```
+
+2. 在 **Script** 中新建一个脚本 **LotteryCell** ，并把它挂载到 **LotteryItem 子物体预制件** 上
+
+3. 在 **LotteryCell 脚本** 中 **初始化 UI**
+    - 添加 UI 属性，即 UI 组件
+        ```
+        private Transform UIImage;
+        private Transform UIStars;
+        private Transform UINew;
+        private PackageLocalItem packageLocalItem;
+        private PackageTableItem packageTableItem;
+        private LotteryPanel uiParent;
+        ```
+    - 配置各个组件的路径，以及设置一些 UI 组件的初始状态，再在 **Awake()** 中调用初始化方法
+        ```
+        private void Awake()
+        {
+            InitUI();
+        }
+
+
+        void InitUI()
+        {
+            UIImage = transform.Find("Center/Image");
+            UIStars = transform.Find("Bottom/Stars");
+            UINew = transform.Find("Top/New");
+            UINew.gameObject.SetActive(false);
+        }
+        ```
+
+4. 在 **LotteryCell 脚本** 中添加子物品状态刷新方法
+    ```
+    // 刷新方法
+    public void Refresh(PackageLocalItem packageLocalItem, LotteryPanel uiParent)
+    {
+        // 对基本数据进行初始化
+        this.packageLocalItem = packageLocalItem;
+        this.packageTableItem = GameManager.Instance.GetPackageItemById(this.packageLocalItem.id);
+        this.uiParent = uiParent;
+
+        // 刷新 UI 图片信息
+        RefreshImage();
+        // 刷新星级
+        RefreshStars();
+    }
+    ```
+    ```
+    using UnityEngine.UI;  // 添加引用 UI 的名称空间
+
+
+    // UI 图片刷新方法，需要添加引用 UI 的名称空间
+    private void RefreshImage()
+    {
+        Texture2D t = (Texture2D)Resources.Load(this.packageTableItem.imagePath);
+        Sprite temp = Sprite.Create(t, new Rect(0, 0, t.width, t.height), new Vector2(0, 0));
+        UIImage.GetComponent<Image>().sprite = temp;
+    }
+    ```
+    ```
+    // 星级刷新方法
+    public void RefreshStars()
+    {
+        for( int i = 0; i < UIStars.childCount; i++)
+        {
+            Transform star = UIStars.GetChild(i);
+            if(this.packageTableItem.star > i)
+            {
+                star.gameObject.SetActive(true);
+            }
+            else
+            {
+                star.gameObject.SetActive(false);
+            }
+        }
+    }
+    ```
+
+5. 在 **LotteryPanel 脚本** 中完善 **单抽** 和 **十抽** 的逻辑
+    ```
+    // 添加点击事件
+    // 十抽按钮
+    // 十抽按钮
+    private void OnLottery10Btn()
+    {
+        print(">>>>>>>>>> OnLottery10Btn");
+
+
+        // 抽卡获得十张新的物品，先存在本地数据中
+        List<PackageLocalItem> packageLocalItems = GameManager.Instance.GetLotteryDandom10(sort: true);
+
+        // 先销毁整个容器中原本的所有卡片
+        for(int i = 0; i < UICenter.childCount; i++)
+        {
+            Destroy(UICenter.GetChild(i).gameObject);
+        }
+
+        // 再实例化这十个物品
+        foreach(PackageLocalItem item in packageLocalItems)
+        {
+            Transform LotteryCellTran = Instantiate(LotteryCellPrefab.transform, UICenter) as Transform;
+
+            // 对卡片信息展示刷新
+            LotteryCell lotteryCell = LotteryCellTran.GetComponent<LotteryCell>();
+            lotteryCell.Refresh(item, this);
+        }
+    }
+    ```
+    ```
+    // 单抽按钮
+    // 单抽按钮
+    private void OnLottery1Btn()
+    {
+        print(">>>>>>>>>> OnLottery1Btn");
+
+        // 先销毁整个容器中原本的所有卡片
+        for (int i = 0; i < UICenter.childCount; i++)
+        {
+            Destroy(UICenter.GetChild(i).gameObject);
+        }
+        // 再抽卡获得一张新的物品
+        PackageLocalItem item = GameManager.Instance.GetLotteryRandom1();
+
+        Transform LotteryCellTran = Instantiate(LotteryCellPrefab.transform, UICenter) as Transform;
+        // 对卡片做信息展示刷新
+        LotteryCell lotteryCell = LotteryCellTran.GetComponent<LotteryCell>();
+        lotteryCell.Refresh(item, this);
+    }
+    ```
+
+6. 把 **LotteryCell 脚本** 中的初始化 UI 方法 **InitUI()** 的 **UINew** 注释掉
+    ```
+    // 初始化 UI 方法
+    void InitUI()
+    {
+        UIImage = transform.Find("Center/Image");
+        UIStars = transform.Find("Bottom/Stars");
+        //UINew = transform.Find("Top/New");
+        //UINew.gameObject.SetActive(false);
+    }
+    ```
+
+
+## 六、删除逻辑
+1. 在 **PackagePanel 脚本** 中将背包界面设置为三个模式：**普通模式** 、**删除模式** 、**排序模式（未来可拓展实现）**
+    ```
+    // 将背包界面设置为三个模式
+    public enum PackageMode
+    {
+        normal,  // 普通模式
+        delete,  // 删除模式
+        sort,  //排序模式（未来可拓展实现）
+    }
+    ```
+
+2. 在 **PackagePanel 脚本** 中添加一个 **List<string>** 列表属性，用来容纳选择删除时，所有被选中的物品的 uid
+    ```
+    // 用来容纳选择删除时，所有被选中的物品的 uid
+    public List<string> deleteChooseUid;
+    ```
+
+3. 在 **PackagePanel 脚本** 中给外部提供一个方法，用来添加删除选中项到 **deleteChooseUid 列表** 中，然后执行刷新整个界面的删除状态的方法 **RefreshDeletePanel()**
+    ```
+    // 给外部提供一个方法，用来添加删除选中项到 List<string> deleteChooseUid 中
+    public void AddChooseDeleteUid(string uid)
+    {
+        this.deleteChooseUid ??= new List<string>();
+        if (!this.deleteChooseUid.Contains(uid))
+        {
+            this.deleteChooseUid.Add(uid);
+        }
+        else
+        {
+            this.deleteChooseUid.Remove(uid);
+        }
+        RefreshDeletePanel();
+    }
+    ```
+
+4. 在 **PackagePanel 脚本** 中写刷新整个界面的删除状态的方法 **RefreshDeletePanel()**
+    ```
+    // 刷新整个界面的删除状态
+    private void RefreshDeletePanel()
+    {
+        RectTransform scrollContent = UIScrollView.GetComponent<ScrollRect>().content;
+        foreach(Transform cell in scrollContent)
+        {
+            PackageCell packageCell = cell.GetComponent<PackageCell>();
+        }
+    }
+    ```
+
+5. 在 **PackagePanel 脚本** 中添加一个属性 **curMode** ，用来表示当前背包界面处于哪个状态
+    ```
+    // 用来表示当前背包界面处于哪个状态
+    public PackageMode curMode = PackageMode.normal;
+    ```
+
+6. 设置左下角的 **删除按钮** 的响应逻辑，点击 **进入删除模式**，并 **打开删除界面**
+    ```
+    // 点击左下角的删除按钮，进入删除模式
+    private void OnDelete()
+    {
+        print(">>>>> OnDelete");
+        curMode = PackageMode.delete;  // 背包界面状态进入删除模式
+        UIDeletePanel.gameObject.SetActive(true);  // 打开删除界面
+    }
+    ```
+
+7. 设置删除界面中 **返回按钮** 的响应逻辑，点击就 **退出删除模式** ，**关闭删除界面** ，退出删除模式后要 **重置选中的删除列表** ，最后 **刷新整个界面中删除物品的选中状态**
+    ```
+    // 在删除界面中点击返回按钮，就退出删除模式
+    private void OnDeleteBack()
+    {
+        print(">>>>> OnDeleteBack");
+        curMode = PackageMode.normal;  // 背包界面状态回到普通状态
+        UIDeletePanel.gameObject.SetActive(false);  // 关闭删除界面
+        // 退出删除模式后要重置选中的删除列表
+        deleteChooseUid = new List<string>();
+        // 最后刷新整个界面中删除物品的选中状态
+        RefreshDeletePanel();
+    }
+    ```
+
+8. 在 **GameManager 脚本** 中添加删除添加物品的方法，包括 **删除多个物品的方法** 和 **删除单个物品的方法**
+    ```
+    // 删除添加物品的方法
+    // 删除多个物品的方法
+    public void DeletePackageItems(List<string> uids)
+    {
+        foreach(string uid in uids)
+        {
+            DeletePackageItem(uid, false);
+        }
+        PackageLocalData.Instance.savePackage();
+    }
+    //删除单个物品的方法
+    public void DeletePackageItem(string uid, bool needSave = true)
+    {
+        PackageLocalItem packageLocalItem = GetPackageLocalItemByUId(uid);
+        if (packageLocalItem == null)
+            return;
+        PackageLocalData.Instance.items.Remove(packageLocalItem);
+        if (needSave)
+        {
+            PackageLocalData.Instance.savePackage();
+        }
+    }
+    ```
+
+9. 在 **PackagePanel 脚本** 中写 **确认删除按钮** 的响应事件
+    ```
+    // 确认删除
+    private void OnDeleteConfirm()
+    {
+        print(">>>>> OnDeleteConfirm");
+
+        // 先进行合法性判断
+        if(this.deleteChooseUid == null)
+        {
+            return;
+        }
+        if(this.deleteChooseUid.Count == 0)
+        {
+            return;
+        }
+
+        // 执行删除操作
+        GameManager.Instance.DeletePackageItems(this.deleteChooseUid);
+        // 删除完成后刷新整个背包界面
+        RefreshUI();
+    }
+    ```
+
+10. 在 **PackageCell 脚本** 中添加 **背包子物品刷新选中状态** 的方法
+    ```
+    // 在子物品中刷新选中状态
+    public void RefreshDeleteState()
+    {
+        // 先判断当前物品的 uid 是否在父物品的删除列表中
+        if (this.uiParent.deleteChooseUid.Contains(this.packageLocalData.uid))
+        {
+            // 如果是，就显示为删除选中状态
+            this.UIDeleteSelect.gameObject.SetActive(true);
+        }
+        else
+        {
+            // 如果不是，就不显示
+            this.UIDeleteSelect.gameObject.SetActive(false);
+        }
+    }
+    ```
+
+11. 在 **PackagePacell 脚本** 中的 **实现鼠标点击的回调方法 OnPointerClick()** 实现 **选中被删除的物品** 的方法
+    ```
+        // 选中被删除的物品
+        // 先判断父物品是否处于删除状态
+        if(this.uiParent.curMode == PackageMode.delete)
+        {
+            // 如果是处于删除状态，就代表选中了当前这个物品，就要把它添加到父物品的删除列表中的 uid 中
+            this.uiParent.AddChooseDeleteUid(this.packageLocalData.uid);
+        }
+    ```
+
+12. 在 **PackagePanel 脚本** 中的 **刷新删除界面状态的方法 RefreshDeletePanel()** 中添加 **刷新物品选中状态的方法**
+    ```
+    // 刷新整个界面的删除状态
+    private void RefreshDeletePanel()
+    {
+        RectTransform scrollContent = UIScrollView.GetComponent<ScrollRect>().content;
+        foreach(Transform cell in scrollContent)
+        {
+            PackageCell packageCell = cell.GetComponent<PackageCell>();
+            // 刷新物品选中状态
+            packageCell.RefreshDeleteState();
+        }
+    }
+    ```

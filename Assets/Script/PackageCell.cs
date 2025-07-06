@@ -95,11 +95,36 @@ public class PackageCell : MonoBehaviour, IPointerClickHandler, IPointerEnterHan
     }
 
 
+    // 在子物品中刷新选中状态
+    public void RefreshDeleteState()
+    {
+        // 先判断当前物品的 uid 是否在父物品的删除列表中
+        if (this.uiParent.deleteChooseUid.Contains(this.packageLocalData.uid))
+        {
+            // 如果是，就显示为删除选中状态
+            this.UIDeleteSelect.gameObject.SetActive(true);
+        }
+        else
+        {
+            // 如果不是，就不显示
+            this.UIDeleteSelect.gameObject.SetActive(false);
+        }
+    }
+
+
     // 实现鼠标点击的回调方法
     public void OnPointerClick(PointerEventData eventData)
     {
         // 打印当前执行的方法的方法名以及这一数据
         Debug.Log("OnPointerClick: " + eventData.ToString());
+
+        // 选中被删除的物品
+        // 先判断父物品是否处于删除状态
+        if(this.uiParent.curMode == PackageMode.delete)
+        {
+            // 如果是处于删除状态，就代表选中了当前这个物品，就要把它添加到父物品的删除列表中的 uid 中
+            this.uiParent.AddChooseDeleteUid(this.packageLocalData.uid);
+        }
 
         // 判断当前点击选中的物品是否和父物品的 uid 一样，如果一样则代表是重复点击，不执行任何逻辑
         if (this.uiParent.chooseUID == this.packageLocalData.uid)

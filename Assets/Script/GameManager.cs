@@ -29,8 +29,38 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+        // 先主动打开主界面进行测试
+        UIManager.Instance.OpenPanel(UIConst.MainPanel);
+
+        // 先主动打开抽卡界面进行测试
+        //UIManager.Instance.OpenPanel(UIConst.LotteryPanel);
+
         // 主动打开背包界面
-        UIManager.Instance.OpenPanel(UIConst.PackagePanel);  // 调用 UIManager 实例中打开界面的方法，同时传入 PackagePanel 背包界面常量名，打开背包界面
+        //UIManager.Instance.OpenPanel(UIConst.PackagePanel);  // 调用 UIManager 实例中打开界面的方法，同时传入 PackagePanel 背包界面常量名，打开背包界面
+    }
+
+
+    // 删除添加物品的方法
+    // 删除多个物品的方法
+    public void DeletePackageItems(List<string> uids)
+    {
+        foreach(string uid in uids)
+        {
+            DeletePackageItem(uid, false);
+        }
+        PackageLocalData.Instance.savePackage();
+    }
+    //删除单个物品的方法
+    public void DeletePackageItem(string uid, bool needSave = true)
+    {
+        PackageLocalItem packageLocalItem = GetPackageLocalItemByUId(uid);
+        if (packageLocalItem == null)
+            return;
+        PackageLocalData.Instance.items.Remove(packageLocalItem);
+        if (needSave)
+        {
+            PackageLocalData.Instance.savePackage();
+        }
     }
 
 
@@ -52,6 +82,78 @@ public class GameManager : MonoBehaviour
         return PackageLocalData.Instance.LoadPackage();  // 直接调用 PackageLocalData 实例中封装好的加载数据的方法 LoadPackage()
     }
     
+
+    // 根据物品类型获取配置的表格数据
+    // 1：武器， 2：食物
+    public List<PackageTableItem> GetPackageTableByType(int type)
+    {
+        List<PackageTableItem> packageItems = new List<PackageTableItem>();
+        foreach(PackageTableItem packageItem in GetPackageTable().DataList)
+        {
+            if(packageItem.type == type)
+            {
+                packageItems.Add(packageItem);
+            }
+        }
+        return packageItems;
+    }
+
+
+    // 抽卡的具体逻辑（单抽）
+    public PackageLocalItem GetLotteryRandom1()
+    {
+        // 获取所有武器的表格数据
+        List<PackageTableItem> packageItems = GetPackageTableByType(GameConst.PackageTypeWeapon);
+        // 从中随机抽取一件武器
+        int index = Random.Range(0, packageItems.Count);
+        PackageTableItem packageItem = packageItems[index];
+        // 把这个武器初始化为动态数据，作为最终结果返回给玩家
+        PackageLocalItem packageLocalItem = new()
+        {
+            uid = System.Guid.NewGuid().ToString(),
+            id = packageItem.id,
+            num = 1,
+            level = 1,
+            isNew = CheckWeaponIsNew(packageItem.id),
+        };
+        // 把抽到的卡进行存档，用 PackageLocalData 进行保存，最终以 Json 格式存储在本地的文本文件中
+        PackageLocalData.Instance.items.Add(packageLocalItem);
+        PackageLocalData.Instance.savePackage();
+        return packageLocalItem;
+    }
+
+    // 十抽
+    public List<PackageLocalItem> GetLotteryDandom10(bool sort = false)
+    {
+        // 随机抽卡
+        List<PackageLocalItem> packageLocalItems = new();
+        for(int i = 0; i < 10; i++)
+        {
+            PackageLocalItem packageLocalItem = GetLotteryRandom1();
+            packageLocalItems.Add(packageLocalItem);
+        }
+        // 武器排序
+        if (sort)
+        {
+            packageLocalItems.Sort(new PackageItemComparer());
+        }
+        return packageLocalItems;
+    }
+
+
+    // 判断武器是不是新获得的
+    public bool CheckWeaponIsNew(int id)
+    {
+        foreach(PackageLocalItem packageLocalItem in GetPackageLocalData())
+        {
+            if(packageLocalItem.id == id)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
 
     // 根据 id 取到表格中的指定数据的方法
     public PackageTableItem GetPackageItemById(int id)
@@ -118,4 +220,14 @@ public class PackageItemComparer : IComparer<PackageLocalItem>
         }
         return starComparison;
     }
+}
+
+
+// 存储物品类型的常量表
+public class GameConst
+{
+    // 武器类型常量
+    public const int PackageTypeWeapon = 1;
+    // 食物类型常量
+    public const int PackageTypeFood = 2;
 }
